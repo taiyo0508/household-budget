@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家計簿アプリ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .negative-amount { color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center my-4">家計簿アプリ</h1>
+        
+        <!-- 月選択 -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between items-center">
+            <button id="prevMonth" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                前月
+            </button>
+            
+            <h2 id="currentMonthDisplay" class="text-xl font-semibold">
+                2025年1月
+            </h2>
+            
+            <button id="nextMonth" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                次月
+            </button>
+        </div>
+        
+        <!-- 入力フォーム -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h3 id="formTitle" class="text-xl font-semibold mb-4">
+                新規支出の追加
+            </h3>
+            
+            <form id="expenseForm">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ユーザー</label>
+                        <select id="userSelect" class="w-full p-2 border rounded">
+                            <option value="user1">太陽</option>
+                            <option value="user2">愛華音</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">日付</label>
+                        <input
+                            id="dateInput"
+                            type="text"
+                            placeholder="例: 15"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">内容</label>
+                        <input
+                            id="descriptionInput"
+                            type="text"
+                            placeholder="例: 食料品"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">金額</label>
+                        <input
+                            id="amountInput"
+                            type="text"
+                            placeholder="例: 1200"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                </div>
+                
+                <div class="mt-4 flex justify-end">
+                    <button
+                        id="cancelButton"
+                        type="button"
+                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded mr-2 hover:bg-gray-400 hidden"
+                    >
+                        キャンセル
+                    </button>
+                    
+                    <button
+                        id="submitButton"
+                        type="submit"
+                        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                        追加
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 家計簿テーブル -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 太陽のテーブル -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-yellow-600">
+                    太陽
+                </h3>
+                
+                <div class="mb-4 p-2 bg-gray-100 rounded">
+                    <p><strong>前月持越し:</strong> <span id="user1-carryover">0</span>円</p>
+                    <p><strong>当月合計:</strong> <span id="user1-current">0</span>円</p>
+                    <p><strong>総合計:</strong> <span id="user1-total">0</span>円</p>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-2 text-left">日</th>
+                                <th class="border p-2 text-left">内容</th>
+                                <th class="border p-2 text-right">金額</th>
+                                <th class="border p-2 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user1-expenses">
+                            <!-- ここに太陽の支出データが入ります -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 愛華音のテーブル -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">
+                    愛華音
+                </h3>
+                
+                <div class="mb-4 p-2 bg-gray-100 rounded">
+                    <p><strong>前月持越し:</strong> <span id="user2-carryover">0</span>円</p>
+                    <p><strong>当月合計:</strong> <span id="user2-current">0</span>円</p>
+                    <p><strong>総合計:</strong> <span id="user2-total">0</span>円</p>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-2 text-left">日</th>
+                                <th class="border p-2 text-left">内容</th>
+                                <th class="border p-2 text-right">金額</th>
+                                <th class="border p-2 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user2-expenses">
+                            <!-- ここに愛華音の支出データが入ります -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 定期支出の確認 -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 太陽の定期支出 -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-yellow-600">
+                    太陽の定期支出確認
+                </h3>
+                
+                <div id="user1-regular-expenses" class="space-y-2">
+                    <!-- ここに太陽の定期支出チェックリストが入ります -->
+                </div>
+                
+                <div id="user1-regular-warning" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg hidden">
+                    <p class="font-bold">⚠️ 入力されていない定期支出があります</p>
+                </div>
+            </div>
+            
+            <!-- 愛華音の定期支出 -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">
+                    愛華音の定期支出確認
+                </h3>
+                
+                <div id="user2-regular-expenses" class="space-y-2">
+                    <!-- ここに愛華音の定期支出チェックリストが入ります -->
+                </div>
+                
+                <div id="user2-regular-warning" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg hidden">
+                    <p class="font-bold">⚠️ 入力されていない定期支出があります</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 月末清算 -->
+        <div class="mt-6 bg-white p-6 rounded-lg shadow">
+            <h3 class="text-xl font-semibold mb-4">月末清算</h3>
+            <p id="settlementDate" class="text-gray-600 mb-4">清算日: 2025年1月31日</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 太陽の精算 -->
+                <div class="p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50">
+                    <h4 class="font-bold text-lg mb-2">太陽の精算</h4>
+                    <div class="flex flex-col space-y-2">
+                        <div class="flex justify-between">
+                            <span>合計金額:</span>
+                            <span id="user1-settlement-total" class="font-bold">0円</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>返金額:</span>
+                            <input
+                                id="user1-refund"
+                                type="number"
+                                value="0"
+                                class="w-32 p-2 border rounded text-right"
+                                placeholder="0"
+                            />
+                        </div>
+                        <div class="flex justify-between pt-2 border-t">
+                            <span>翌月持越額:</span>
+                            <span id="user1-next-carryover" class="font-bold">0円</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 愛華音の精算 -->
+                <div class="p-4 rounded-lg border-2 border-blue-400 bg-blue-50">
+                    <h4 class="font-bold text-lg mb-2">愛華音の精算</h4>
+                    <div class="flex flex-col space-y-2">
+                        <div class="flex justify-between">
+                            <span>合計金額:</span>
+                            <span id="user2-settlement-total" class="font-bold">0円</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>返金額:</span>
+                            <input
+                                id="user2-refund"
+                                type="number"
+                                value="0"
+                                class="w-32 p-2 border rounded text-right"
+                                placeholder="0"
+                            />
+                        </div>
+                        <div class="flex justify-between pt-2 border-t">
+                            <span>翌月持越額:</span>
+                            <span id="user2-next-carryover" class="font-bold">0円</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-center">
+                <button
+                    id="settlementButton"
+                    class="px-6 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700"
+                >
+                    月末清算を実行
+                </button>
+            </div>
+        </div>
+
+        <!-- 同期ステータス表示 -->
+        <div class="mt-6 bg-white p-4 rounded-lg shadow flex justify-between items-center">
+            <div>
+                <span id="syncStatus" class="text-gray-600">データ同期状態: 同期済み</span>
+            </div>
+            <button id="syncButton" class="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600">
+                データを更新
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // APIのURL (GASのウェブアプリURL)
+        const API_URL = https://script.google.com/macros/s/AKfycbzJqIq4n7g8UTmOpBUapDpD2QOAo6qJeA6r6UK1XTVD_teOZTB1-WqXTI8u7JiSyZ1y/exec
+        
+        // アプリケーションの状態
+        const appState = {
+            currentYear: new Date().getFullYear(),
+            currentMonth: new Date().getMonth() + 1,
+            editingExpense: null,
+            users: {
+                user1: { name: '太陽' },
+                user2: { name: '愛華音' }
+            },
+            carryOver: {
+                user1: 0,
+                user2: 0
+            },
+            expenses: {
+                user1: [],
+                user2: []
+            },
+            refundAmounts: {
+                user1: 0,
+                user2: 0
+            },
+            regularExpenses: {
+                user1: [
+                    { description: '電気代', checked: false },
+                    { description: '水道代', checked: false },
+                    { description: 'ガス代', checked: false }
+                ],
+                user2: [
+                    { description: 'ガソリン代', checked: false }
+                ]
+            }
+        };
+
+        // DOM要素の参照を取得
+        const elements = {
+            currentMonthDisplay: document.getElementById('currentMonthDisplay'),
+            settlementDate: document.getElementById('settlementDate'),
+            prevMonthButton: document.getElementById('prevMonth'),
+            nextMonthButton: document.getElementById('nextMonth'),
+            formTitle: document.getElementById('formTitle'),
+            expenseForm: document.getElementById('expenseForm'),
+            userSelect: document.getElementById('userSelect'),
+            dateInput: document.getElementById('dateInput'),
+            descriptionInput: document.getElementById('descriptionInput'),
+            amountInput: document.getElementById('amountInput'),
+            submitButton: document.getElementById('submitButton'),
+            cancelButton: document.getElementById('cancelButton'),
+            user1ExpensesTable: document.getElementById('user1-expenses'),
+            user2ExpensesTable: document.getElementById('user2-expenses'),
+            user1Carryover: document.getElementById('user1-carryover'),
+            user2Carryover: document.getElementById('user2-carryover'),
+            user1Current: document.getElementById('user1-current'),
+            user2Current: document.getElementById('user2-current'),
+            user1Total: document.getElementById('user1-total'),
+            user2Total: document.getElementById('user2-total'),
+            user1RegularExpenses: document.getElementById('user1-regular-expenses'),
+            user2RegularExpenses: document.getElementById('user2-regular-expenses'),
+            user1RegularWarning: document.getElementById('user1-regular-warning'),
+            user2RegularWarning: document.getElementById('user2-regular-warning'),
+            user1SettlementTotal: document.getElementById('user1-settlement-total'),
+            user2SettlementTotal: document.getElementById('user2-settlement-total'),
+            user1Refund: document.getElementById('user1-refund'),
+            user2Refund: document.getElementById('user2-refund'),
+            user1NextCarryover: document.getElementById('user1-next-carryover'),
+            user2NextCarryover: document.getElementById('user2-next-carryover'),
+            settlementButton: document.getElementById('settlementButton'),
+            syncStatus: document.getElementById('syncStatus'),
+            syncButton: document.getElementById('syncButton')
+        };
+
+        // APIにリクエストを送信する関数
+        async function callAPI(action, params = {}) {
+            try {
+                const url = new URL(API_URL);
+                url.searchParams.append('action', action);
+                
+                // パラメータを追加
+                Object.keys(params).forEach(key => {
+                    url.searchParams.append(key, params[key]);
+                });
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    return data;
+                } else {
+                    throw new Error(data.error || '不明なエラーが発生しました');
+                }
+            } catch (error) {
+                console.error(`API呼び出しエラー (${action}):`, error);
+                alert(`データの取得中にエラーが発生しました: ${error.message}`);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // ユーティリティ関数 - 表示用にフォーマットされた数値を返す
+        function formatCurrency(amount) {
+            return amount.toLocaleString() + '円';
+        }
+
+        // ユーティリティ関数 - 日付を yyyy年m月 形式で表示
+        function formatYearMonth(year, month) {
+            return `${year}年${month}月`;
+        }
+
+        // ユーティリティ関数 - 指定月の最終日を取得
+        function getLastDayOfMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        // データの読み込み
+        async function loadData() {
+            try {
+                elements.syncStatus.textContent = 'データ同期状態: 更新中...';
+                
+                // 各ユーザーの支出データを取得
+                for (const userId in appState.expenses) {
+                    const result = await callAPI('getExpenses', {
+                        userId: userId,
+                        year: appState.currentYear,
+                        month: appState.currentMonth
+                    });
+                    
+                    if (result.success) {
+                        appState.expenses[userId] = result.expenses || [];
+                    }
+                    
+                    // 持ち越しデータを取得
+                    const carryOverResult = await callAPI('getCarryOver', {
+                        userId: userId,
+                        year: appState.currentYear,
+                        month: appState.currentMonth
+                    });
+                    
+                    if (carryOverResult.success) {
+                        appState.carryOver[userId] = carryOverResult.carryOver || 0;
+                    }
+                }
+                
+                updateUI();
+                elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
+                
+                return true;
+            } catch (error) {
+                console.error('データ読み込みエラー:', error);
+                elements.syncStatus.textContent = 'データ同期状態: エラー';
+                return false;
+            }
+        }
+
+        // 表示の更新
+        function updateUI() {
+            // 月表示の更新
+            elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
+            
+            // 清算日表示の更新
+            const lastDay = getLastDayOfMonth(appState.currentYear, appState.currentMonth);
+            elements.settlementDate.textContent = `清算日: ${appState.currentYear}年${appState.currentMonth}月${lastDay}日`;
+            
+            // 支出テーブルの更新
+            updateExpenseTables();
+            
+            // 集計の更新
+            updateTotals();
+            
+            // 定期支出チェックの更新
+            updateRegularExpenses();
+            
+            // 精算画面の更新
+            updateSettlementUI();
+        }
+
+        // 支出テーブルの更新
+        function updateExpenseTables() {
+            for (const userId in appState.expenses) {
+                const tableBody = document.getElementById(`${userId}-expenses`);
+                const expenses = appState.expenses[userId];
+                
+                // テーブルをクリア
+                tableBody.innerHTML = '';
+                
+                if (expenses.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `
+                        <td colspan="4" class="border p-2 text-center text-gray-500">
+                            データがありません
+                        </td>
+                    `;
+                    tableBody.appendChild(emptyRow);
+                } else {
+                    // 支出データを表示
+                    expenses.forEach(expense => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        
+                        const amountClass = expense.amount < 0 ? 'negative-amount' : '';
+                        
+                        row.innerHTML = `
+                            <td class="border p-2">${expense.date}</td>
+                            <td class="border p-2">${expense.description}</td>
+                            <td class="border p-2 text-right ${amountClass}">${expense.amount.toLocaleString()}</td>
+                            <td class="border p-2 text-center">
+                                <button
+                                    data-id="${expense.id}"
+                                    data-action="edit"
+                                    class="px-2 py-1 bg-blue-500 text-white rounded text-sm mr-1 hover:bg-blue-600"
+                                >
+                                    編集
+                                </button>
+                                <button
+                                    data-id="${expense.id}"
+                                    data-action="delete"
+                                    class="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                                >
+                                    削除
+                                </button>
+                            </td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                        
+                        // 編集ボタンにイベントリスナーを追加
+                        row.querySelector('[data-action="edit"]').addEventListener('click', function() {
+                            const expenseId = this.getAttribute('data-id');
+                            editExpense(userId, expenseId);
+                        });
+                        
+                        // 削除ボタンにイベントリスナーを追加
+                        row.querySelector('[data-action="delete"]').addEventListener('click', function() {
+                            const expenseId = this.getAttribute('data-id');
+                            deleteExpense(userId, expenseId);
+                        });
+                    });
+                }
+            }
+        }
+
+        // 合計金額の更新
+        function updateTotals() {
+            for (const userId in appState.expenses) {
+                const expenses = appState.expenses[userId];
+                const carryOver = appState.carryOver[userId] || 0;
+                
+                const currentTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                const total = currentTotal + carryOver;
+                
+                document.getElementById(`${userId}-carryover`).textContent = formatCurrency(carryOver);
+                document.getElementById(`${userId}-current`).textContent = formatCurrency(currentTotal);
+                document.getElementById(`${userId}-total`).textContent = formatCurrency(total);
+                
+                // 精算画面の合計も更新
+                document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
+                
+                // 返金額が変更されたときのイベントを設定
+                const refundInput = document.getElementById(`${userId}-refund`);
+                const nextCarryover = document.getElementById(`${userId}-next-carryover`);
+                
+                refundInput.value = appState.refundAmounts[userId] || 0;
+                
+                // 翌月持越額の表示を更新
+                const refundAmount = parseFloat(refundInput.value) || 0;
+                nextCarryover.textContent = formatCurrency(total - refundAmount);
+            }
+        }
+
+        // 定期支出チェックの更新
+        function updateRegularExpenses() {
+            for (const userId in appState.regularExpenses) {
+                const container = document.getElementById(`${userId}-regular-expenses`);
+                const warning = document.getElementById(`${userId}-regular-warning`);
+                
+                // コンテナをクリア
+                container.innerHTML = '';
+                
+                // 定期支出項目の確認
+                const regularItems = appState.regularExpenses[userId];
+                
+                // 支出データから定期支出が入力されているかチェック
+                const expenses = appState.expenses[userId];
+                regularItems.forEach(item => {
+                    item.checked = expenses.some(expense => 
+                        expense.description.includes(item.description)
+                    );
+                });
+                
+                // 定期支出チェックリストを表示
+                regularItems.forEach((item, index) => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = `p-3 rounded-lg flex items-center justify-between ${
+                        item.checked ? 'bg-green-100' : 'bg-red-100'
+                    }`;
+                    
+                    itemElement.innerHTML = `
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                ${item.checked ? 'checked' : ''}
+                                class="mr-3 h-5 w-5"
+                                data-user="${userId}"
+                                data-index="${index}"
+                            />
+                            <span class="font-medium">${item.description}</span>
+                        </div>
+                        <span class="${item.checked ? 'text-green-600' : 'text-red-600'}">
+                            ${item.checked ? '入力済み' : '未入力'}
+                        </span>
+                    `;
+                    
+                    container.appendChild(itemElement);
+                    
+                    // チェックボックスにイベントリスナーを追加
+                    const checkbox = itemElement.querySelector('input[type="checkbox"]');
+                    checkbox.addEventListener('change', function() {
+                        const userId = this.getAttribute('data-user');
+                        const index = parseInt(this.getAttribute('data-index'));
+                        
+                        toggleRegularExpenseCheck(userId, index);
+                    });
+                });
+                
+                // 警告表示の制御
+                const hasUncheckedItems = regularItems.some(item => !item.checked);
+                warning.style.display = hasUncheckedItems ? 'block' : 'none';
+            }
+        }
+
+        // 精算画面の更新
+        function updateSettlementUI() {
+            for (const userId in appState.expenses) {
+                const total = calculateTotal(userId);
+                const refundInput = document.getElementById(`${userId}-refund`);
+                const nextCarryover = document.getElementById(`${userId}-next-carryover`);
+                
+                document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
+                
+                // 返金額の変更イベント
+                refundInput.addEventListener('input', function() {
+                    const refundAmount = parseFloat(this.value) || 0;
+                    appState.refundAmounts[userId] = refundAmount;
+                    nextCarryover.textContent = formatCurrency(total - refundAmount);
+                });
+                
+                // 初期表示
+                const refundAmount = appState.refundAmounts[userId] || 0;
+                refundInput.value = refundAmount;
+                nextCarryover.textContent = formatCurrency(total - refundAmount);
+            }
+        }
+
+        // 合計金額の計算
+        function calculateTotal(userId) {
+            const expenses = appState.expenses[userId];
+            const carryOver = appState.carryOver[userId] || 0;
+            
+            return expenses.reduce((sum, expense) => sum + expense.amount, 0) + carryOver;
+        }
+
+        // 支出の追加
+        async function addExpense(e) {
+            e.preventDefault();
+            
+            // 入力値の取得
+            const userId = elements.userSelect.value;
+            const date = elements.dateInput.value.trim();
+            const description = elements.descriptionInput.value.trim();
+            const amountStr = elements.amountInput.value.trim();
+            
+            // バリデーション
+            if (!date || !description || !amountStr) {
+                alert('すべての項目を入力してください');
+                return;
+            }
+            
+            const amount = parseFloat(amountStr.replace(/,/g, ''));
+            
+            if (isNaN(amount)) {
+                alert('金額は数値で入力してください');
+                return;
+            }
+            
+            // 編集モードの場合
+            if (appState.editingExpense) {
+                // 編集は現在のGAS実装では対応していないため、削除して再追加する形で対応
+                await deleteExpense(userId, appState.editingExpense.id, true);
+            }
+            
+            // GASに新しい支出を追加
+            const result = await callAPI('saveExpense', {
+                data: JSON.stringify({
+                    userId: userId,
+                    date: date,
+                    description: description,
+                    amount: amount,
+                    year: appState.currentYear,
+                    month: appState.currentMonth
+                })
+            });
+            
+            if (result.success) {
+                // 成功したら、データを再読み込み
+                await loadData();
+                
+                // フォームをリセット
+                elements.expenseForm.reset();
+                
+                // 編集モードをリセット
+                if (appState.editingExpense) {
+                    appState.editingExpense = null;
+                    elements.formTitle.textContent = '新規支出の追加';
+                    elements.submitButton.textContent = '追加';
+                    elements.cancelButton.classList.add('hidden');
+                }
+            }
+        }
+
+        // 支出の編集
+        function editExpense(userId, expenseId) {
+            const expenses = appState.expenses[userId];
+            const expense = expenses.find(item => item.id === expenseId);
+            
+            if (!expense) return;
+            
+            // 編集対象を保存
+            appState.editingExpense = expense;
+            
+            // フォームに値をセット
+            elements.userSelect.value = userId;
+            elements.dateInput.value = expense.date;
+            elements.descriptionInput.value = expense.description;
+            elements.amountInput.
+elements.amountInput.value = expense.amount;
+            
+            // フォームタイトルと送信ボタンのテキストを変更
+            elements.formTitle.textContent = '支出の編集';
+            elements.submitButton.textContent = '保存';
+            
+            // キャンセルボタンを表示
+            elements.cancelButton.classList.remove('hidden');
+            
+            // フォームまでスクロール
+            elements.expenseForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 支出の削除
+        async function deleteExpense(userId, expenseId, skipConfirm = false) {
+            if (!skipConfirm && !confirm('この支出を削除してもよろしいですか？')) {
+                return;
+            }
+            
+            // 削除はGAS側で未実装のため、現状はクライアント側で対応する
+            // 実際のプロダクションでは、GAS側に削除APIを実装する必要がある
+            
+            // 一時的な対応：全データを再読み込み
+            await loadData();
+        }
+
+        // 定期支出のチェック切り替え
+        function toggleRegularExpenseCheck(userId, index) {
+            const regularItems = appState.regularExpenses[userId];
+            
+            if (regularItems[index]) {
+                regularItems[index].checked = !regularItems[index].checked;
+                updateRegularExpenses();
+            }
+        }
+
+        // 月末清算
+        async function handleSettlement() {
+            if (!confirm(`${appState.currentYear}年${appState.currentMonth}月の精算を行いますか？`)) {
+                return;
+            }
+            
+            try {
+                // 各ユーザーの精算処理
+                for (const userId in appState.expenses) {
+                    const total = calculateTotal(userId);
+                    const refundAmount = parseFloat(document.getElementById(`${userId}-refund`).value) || 0;
+                    const nextCarryOver = total - refundAmount;
+                    
+                    // 精算処理をGASに送信
+                    const result = await callAPI('settlement', {
+                        data: JSON.stringify({
+                            userId: userId,
+                            year: appState.currentYear,
+                            month: appState.currentMonth,
+                            currentTotal: total,
+                            refund: refundAmount,
+                            nextCarryOver: nextCarryOver
+                        })
+                    });
+                    
+                    if (!result.success) {
+                        throw new Error(`${appState.users[userId].name}の精算処理に失敗しました`);
+                    }
+                }
+                
+                // 月を進める
+                const nextMonth = appState.currentMonth === 12 ? 1 : appState.currentMonth + 1;
+                const nextYear = appState.currentMonth === 12 ? appState.currentYear + 1 : appState.currentYear;
+                
+                appState.currentMonth = nextMonth;
+                appState.currentYear = nextYear;
+                
+                // データを再読み込み
+                await loadData();
+                
+                // 返金額をリセット
+                appState.refundAmounts = {
+                    user1: 0,
+                    user2: 0
+                };
+                
+                alert('精算が完了しました。翌月へ持ち越しました。');
+            } catch (error) {
+                console.error('精算処理エラー:', error);
+                alert(`精算処理中にエラーが発生しました: ${error.message}`);
+            }
+        }
+
+        // 前月ボタンのイベントハンドラ
+        function goToPrevMonth() {
+            let newMonth = appState.currentMonth - 1;
+            let newYear = appState.currentYear;
+            
+            if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            }
+            
+            appState.currentMonth = newMonth;
+            appState.currentYear = newYear;
+            
+            loadData();
+        }
+
+        // 次月ボタンのイベントハンドラ
+        function goToNextMonth() {
+            let newMonth = appState.currentMonth + 1;
+            let newYear = appState.currentYear;
+            
+            if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            }
+            
+            appState.currentMonth = newMonth;
+            appState.currentYear = newYear;
+            
+            loadData();
+        }
+
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            // 前月ボタン
+            elements.prevMonthButton.addEventListener('click', goToPrevMonth);
+            
+            // 次月ボタン
+            elements.nextMonthButton.addEventListener('click', goToNextMonth);
+            
+            // 支出フォーム送信
+            elements.expenseForm.addEventListener('submit', addExpense);
+            
+            // キャンセルボタン
+            elements.cancelButton.addEventListener('click', function() {
+                // 編集をキャンセル
+                appState.editingExpense = null;
+                elements.formTitle.textContent = '新規支出の追加';
+                elements.submitButton.textContent = '追加';
+                elements.cancelButton.classList.add('hidden');
+                elements.expenseForm.reset();
+            });
+            
+            // 清算ボタン
+            elements.settlementButton.addEventListener('click', handleSettlement);
+            
+            // 同期ボタン
+            elements.syncButton.addEventListener('click', loadData);
+        }
+
+        // アプリの初期化
+        async function initApp() {
+            // イベントリスナーを設定
+            setupEventListeners();
+            
+            // データを読み込み
+            await loadData();
+        }
+
+        // アプリを初期化
+        initApp();
+    </script>
+</body>
+</html>
