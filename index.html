@@ -284,7 +284,7 @@
 
     <script>
         // APIのURL (GASのウェブアプリURL) - デプロイ後に更新してください
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzj6NTlgQpz8gt6mMYpJ8U16MgsRMbEyGOq0ETxAwubFkyO4jbfbhvEsb2z1veMMRTl/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzmyTIzzG_vehCO1jTgLLKDC9SNNj17mV0ZP3jB3VOe4VwCztDE5I33lQjH86WT2r4c/exec';
         
         // アプリケーションの状態
         const appState = {
@@ -455,9 +455,12 @@
                 elements.syncStatus.textContent = 'データ同期状態: 更新中...';
                 
                 // バッチ処理でデータを一度に取得
+                // バッチ処理でデータを一度に取得する際のパラメータを強化
                 const batchResult = await callAPI('getBatchData', {
                     year: appState.currentYear,
-                    month: appState.currentMonth
+                    month: appState.currentMonth,
+                    includeSettings: true,  // 設定情報も含める
+                    includeHistory: true    // 履歴情報も含める（持ち越し金額の履歴など）
                 });
                 
                 if (batchResult && batchResult.success) {
@@ -468,10 +471,18 @@
                         }
                     }
                     
+                    // 持ち越し金額の詳細をログに記録
+                    addDebugLog('通信レスポンス全体', batchResult);
+                    
                     if (batchResult.carryOver) {
+                        addDebugLog('取得した持ち越し金額の詳細', batchResult.carryOver);
                         for (const userId in batchResult.carryOver) {
-                            appState.carryOver[userId] = parseFloat(batchResult.carryOver[userId]) || 0;
+                            const carryOverAmount = parseFloat(batchResult.carryOver[userId]) || 0;
+                            addDebugLog(`${userId}の持ち越し金額:`, carryOverAmount);
+                            appState.carryOver[userId] = carryOverAmount;
                         }
+                    } else {
+                        addDebugLog('サーバーから持ち越し金額を取得できませんでした');
                     }
                     
                     // 精算日の取得
