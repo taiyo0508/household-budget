@@ -270,7 +270,7 @@
 
     <script>
         // APIのURL (GASのウェブアプリURL)
-        const API_URL = ‘https://script.google.com/macros/s/AKfycbzJqIq4n7g8UTmOpBUapDpD2QOAo6qJeA6r6UK1XTVD_teOZTB1-WqXTI8u7JiSyZ1y/exec'
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxfvmN8VNz_OghvOrkBb1HGYF6b2NBnqkLjtjiMh1CtIS53wduJ4D0Qclgf24kAAL2T/exec'
         
         // アプリケーションの状態
         const appState = {
@@ -342,9 +342,11 @@
             syncButton: document.getElementById('syncButton')
         };
 
-        // APIにリクエストを送信する関数
+        // APIにリクエストを送信する関数 - 修正版
         async function callAPI(action, params = {}) {
             try {
+                console.log(`API呼び出し: ${action}`, params);
+                
                 const url = new URL(API_URL);
                 url.searchParams.append('action', action);
                 
@@ -353,8 +355,12 @@
                     url.searchParams.append(key, params[key]);
                 });
                 
+                console.log(`リクエストURL: ${url.toString()}`);
+                
                 const response = await fetch(url);
                 const data = await response.json();
+                
+                console.log(`API応答: ${action}`, data);
                 
                 if (data.success) {
                     return data;
@@ -365,6 +371,59 @@
                 console.error(`API呼び出しエラー (${action}):`, error);
                 alert(`データの取得中にエラーが発生しました: ${error.message}`);
                 return { success: false, error: error.message };
+            }
+        }
+
+        // データの読み込み - 修正版
+        async function loadData() {
+            try {
+                elements.syncStatus.textContent = 'データ同期状態: 更新中...';
+                
+                // 各ユーザーの支出データを取得
+                for (const userId in appState.expenses) {
+                    console.log(`${userId}の支出データを取得します...`);
+                    console.log(`パラメータ: year=${appState.currentYear}, month=${appState.currentMonth}`);
+                    
+                    try {
+                        const result = await callAPI('getExpenses', {
+                            userId: userId,
+                            year: appState.currentYear,
+                            month: appState.currentMonth
+                        });
+                        
+                        if (result.success) {
+                            appState.expenses[userId] = result.expenses || [];
+                            console.log(`${userId}の支出データ ${appState.expenses[userId].length}件取得`);
+                        } else {
+                            console.error(`${userId}の支出データ取得に失敗:`, result.error);
+                        }
+                        
+                        // 持ち越しデータを取得
+                        const carryOverResult = await callAPI('getCarryOver', {
+                            userId: userId,
+                            year: appState.currentYear,
+                            month: appState.currentMonth
+                        });
+                        
+                        if (carryOverResult.success) {
+                            appState.carryOver[userId] = carryOverResult.carryOver || 0;
+                            console.log(`${userId}の持越金額: ${appState.carryOver[userId]}`);
+                        } else {
+                            console.error(`${userId}の持越金額取得に失敗:`, carryOverResult.error);
+                        }
+                    } catch (error) {
+                        console.error(`${userId}のデータ取得中にエラー:`, error);
+                    }
+                }
+                
+                updateUI();
+                elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
+                
+                return true;
+            } catch (error) {
+                console.error('データ読み込みエラー:', error);
+                elements.syncStatus.textContent = 'データ同期状態: エラー';
+                return false;
             }
         }
 
@@ -381,46 +440,6 @@
         // ユーティリティ関数 - 指定月の最終日を取得
         function getLastDayOfMonth(year, month) {
             return new Date(year, month, 0).getDate();
-        }
-
-        // データの読み込み
-        async function loadData() {
-            try {
-                elements.syncStatus.textContent = 'データ同期状態: 更新中...';
-                
-                // 各ユーザーの支出データを取得
-                for (const userId in appState.expenses) {
-                    const result = await callAPI('getExpenses', {
-                        userId: userId,
-                        year: appState.currentYear,
-                        month: appState.currentMonth
-                    });
-                    
-                    if (result.success) {
-                        appState.expenses[userId] = result.expenses || [];
-                    }
-                    
-                    // 持ち越しデータを取得
-                    const carryOverResult = await callAPI('getCarryOver', {
-                        userId: userId,
-                        year: appState.currentYear,
-                        month: appState.currentMonth
-                    });
-                    
-                    if (carryOverResult.success) {
-                        appState.carryOver[userId] = carryOverResult.carryOver || 0;
-                    }
-                }
-                
-                updateUI();
-                elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
-                
-                return true;
-            } catch (error) {
-                console.error('データ読み込みエラー:', error);
-                elements.syncStatus.textContent = 'データ同期状態: エラー';
-                return false;
-            }
         }
 
         // 表示の更新
@@ -715,17 +734,29 @@
             elements.expenseForm.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // 支出の削除
+        // 支出の削除 - 修正版
         async function deleteExpense(userId, expenseId, skipConfirm = false) {
             if (!skipConfirm && !confirm('この支出を削除してもよろしいですか？')) {
                 return;
             }
             
-            // 削除はGAS側で未実装のため、現状はクライアント側で対応する
-            // 実際のプロダクションでは、GAS側に削除APIを実装する必要がある
-            
-            // 一時的な対応：全データを再読み込み
-            await loadData();
+            try {
+                // GAS側のdeleteExpense機能を呼び出す
+                const result = await callAPI('deleteExpense', {
+                    id: expenseId
+                });
+                
+                if (result.success) {
+                    console.log('支出を削除しました: ', expenseId);
+                    // データを再読み込み
+                    await loadData();
+                } else {
+                    throw new Error(result.error || '削除処理に失敗しました');
+                }
+            } catch (error) {
+                console.error('削除エラー:', error);
+                alert(`削除中にエラーが発生しました: ${error.message}`);
+            }
         }
 
         // 定期支出のチェック切り替え
