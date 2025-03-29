@@ -266,10 +266,24 @@
                 データを更新
             </button>
         </div>
+
+        <!-- デバッグ情報 -->
+        <div id="debugInfo" class="mt-6 bg-gray-800 text-white p-4 rounded-lg shadow hidden">
+            <h3 class="text-xl font-semibold mb-2">デバッグ情報</h3>
+            <pre id="debugOutput" class="text-xs overflow-auto max-h-48"></pre>
+            <div class="mt-2">
+                <button id="toggleDebug" class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-500">
+                    デバッグモード切替
+                </button>
+                <button id="clearDebug" class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-500 ml-2">
+                    ログをクリア
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // APIのURL (GASのウェブアプリURL)
+        // APIのURL (GASのウェブアプリURL) - デプロイ後に更新してください
         const API_URL = 'https://script.google.com/macros/s/AKfycbyxAZy7QeYt1c105k4J4jp7X7zkZwp9Gy_nDuFPoztjJ15yRMxAvMH5_fx6vKpmiPwn/exec';
         
         // アプリケーションの状態
@@ -277,6 +291,7 @@
             currentYear: new Date().getFullYear(),
             currentMonth: new Date().getMonth() + 1,
             editingExpense: null,
+            debugMode: false,
             users: {
                 user1: { name: '太陽' },
                 user2: { name: '愛華音' }
@@ -339,67 +354,98 @@
             user2NextCarryover: document.getElementById('user2-next-carryover'),
             settlementButton: document.getElementById('settlementButton'),
             syncStatus: document.getElementById('syncStatus'),
-            syncButton: document.getElementById('syncButton')
+            syncButton: document.getElementById('syncButton'),
+            debugInfo: document.getElementById('debugInfo'),
+            debugOutput: document.getElementById('debugOutput'),
+            toggleDebug: document.getElementById('toggleDebug'),
+            clearDebug: document.getElementById('clearDebug')
         };
 
-        // プロキシを使用してAPIにリクエストを送信する関数
+        // デバッグログを追加
+        function addDebugLog(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            
+            if (data) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            elements.debugOutput.textContent = logMessage + '\n\n' + elements.debugOutput.textContent;
+            console.log(message, data);
+        }
+
+        // JSONP形式でAPIを呼び出す関数
         async function callAPI(action, params = {}) {
-            try {
-                console.log(`API呼び出し: ${action}`, params);
+            addDebugLog(`API呼び出し: ${action}`, params);
+            
+            return new Promise((resolve, reject) => {
+                // ユニークなコールバック関数名を生成
+                const callbackName = 'jsonpCallback_' + Math.random().toString(36).substring(2, 15);
                 
-                // プロキシURL (複数用意しておき、一つが失敗したら別のを試す)
-                const PROXY_URLS = [
-                    'https://corsproxy.io/?',
-                    'https://api.allorigins.win/raw?url=',
-                    'https://thingproxy.freeboard.io/fetch/'
-                ];
+                // タイムアウト処理
+                const timeoutId = setTimeout(() => {
+                    delete window[callbackName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    addDebugLog(`API呼び出しタイムアウト: ${action}`);
+                    reject(new Error('API呼び出しがタイムアウトしました'));
+                }, 10000);
+                
+                // グローバルスコープにコールバック関数を定義
+                window[callbackName] = function(data) {
+                    // タイムアウトをクリア
+                    clearTimeout(timeoutId);
+                    
+                    // コールバック関数の後始末
+                    delete window[callbackName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    
+                    addDebugLog(`API応答: ${action}`, data);
+                    
+                    if (data && data.success) {
+                        resolve(data);
+                    } else {
+                        reject(new Error(data && data.error ? data.error : '不明なエラーが発生しました'));
+                    }
+                };
                 
                 // パラメータを構築
                 const queryParams = new URLSearchParams({
                     action: action,
+                    callback: callbackName,
                     ...params
                 });
                 
-                // 元のAPIのURL
-                const apiUrl = `${API_URL}?${queryParams.toString()}`;
-                console.log(`元のリクエストURL: ${apiUrl}`);
+                // APIのURL
+                const url = `${API_URL}?${queryParams.toString()}`;
+                addDebugLog(`リクエストURL: ${url}`);
                 
-                // 複数のプロキシを順に試す
-                let lastError = null;
-                for (const proxyUrl of PROXY_URLS) {
-                    try {
-                        // プロキシを通してフェッチ
-                        const fullProxyUrl = proxyUrl + encodeURIComponent(apiUrl);
-                        console.log(`プロキシURL: ${fullProxyUrl}`);
-                        
-                        const response = await fetch(fullProxyUrl);
-                        if (!response.ok) {
-                            throw new Error(`HTTP エラー: ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        console.log(`API応答: ${action}`, data);
-                        
-                        if (data.success) {
-                            return data;
-                        } else {
-                            throw new Error(data.error || '不明なエラーが発生しました');
-                        }
-                    } catch (error) {
-                        lastError = error;
-                        console.warn(`プロキシ ${proxyUrl} でエラー発生、次を試します:`, error);
-                        // 失敗した場合、次のプロキシを試す
-                        continue;
+                // scriptタグを作成してDOMに追加
+                const script = document.createElement('script');
+                script.src = url;
+                script.onerror = () => {
+                    // タイムアウトをクリア
+                    clearTimeout(timeoutId);
+                    
+                    // エラーハンドリング
+                    delete window[callbackName];
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
                     }
-                }
+                    
+                    addDebugLog(`API呼び出しエラー: ${action}`);
+                    reject(new Error('API呼び出しに失敗しました'));
+                };
                 
-                // すべてのプロキシが失敗した場合
-                throw lastError || new Error('すべてのプロキシでリクエストに失敗しました');
-            } catch (error) {
-                console.error(`API呼び出しエラー (${action}):`, error);
+                document.head.appendChild(script);
+            }).catch(error => {
+                addDebugLog(`API呼び出しエラー (${action}):`, error);
                 alert(`データの取得中にエラーが発生しました: ${error.message}`);
                 return { success: false, error: error.message };
-            }
+            });
         }
 
         // データの読み込み
@@ -409,8 +455,8 @@
                 
                 // 各ユーザーの支出データを取得
                 for (const userId in appState.expenses) {
-                    console.log(`${userId}の支出データを取得します...`);
-                    console.log(`パラメータ: year=${appState.currentYear}, month=${appState.currentMonth}`);
+                    addDebugLog(`${userId}の支出データを取得します...`);
+                    addDebugLog(`パラメータ: year=${appState.currentYear}, month=${appState.currentMonth}`);
                     
                     try {
                         const result = await callAPI('getExpenses', {
@@ -419,11 +465,13 @@
                             month: appState.currentMonth
                         });
                         
-                        if (result.success) {
+                        if (result && (result.success !== false) && result.expenses) {
                             appState.expenses[userId] = result.expenses || [];
-                            console.log(`${userId}の支出データ ${appState.expenses[userId].length}件取得`);
+                            addDebugLog(`${userId}の支出データ ${appState.expenses[userId].length}件取得`);
                         } else {
-                            console.error(`${userId}の支出データ取得に失敗:`, result.error);
+                            addDebugLog(`${userId}の支出データ取得に失敗:`, result ? result.error : '不明なエラー');
+                            // エラー時は空の配列にリセット
+                            appState.expenses[userId] = [];
                         }
                         
                         // 持ち越しデータを取得
@@ -433,14 +481,16 @@
                             month: appState.currentMonth
                         });
                         
-                        if (carryOverResult.success) {
-                            appState.carryOver[userId] = carryOverResult.carryOver || 0;
-                            console.log(`${userId}の持越金額: ${appState.carryOver[userId]}`);
+                        if (carryOverResult && (carryOverResult.success !== false) && carryOverResult.carryOver !== undefined) {
+                            appState.carryOver[userId] = parseFloat(carryOverResult.carryOver) || 0;
+                            addDebugLog(`${userId}の持越金額: ${appState.carryOver[userId]}`);
                         } else {
-                            console.error(`${userId}の持越金額取得に失敗:`, carryOverResult.error);
+                            addDebugLog(`${userId}の持越金額取得に失敗:`, carryOverResult ? carryOverResult.error : '不明なエラー');
+                            // エラー時は0にリセット
+                            appState.carryOver[userId] = 0;
                         }
                     } catch (error) {
-                        console.error(`${userId}のデータ取得中にエラー:`, error);
+                        addDebugLog(`${userId}のデータ取得中にエラー:`, error);
                     }
                 }
                 
@@ -449,7 +499,7 @@
                 
                 return true;
             } catch (error) {
-                console.error('データ読み込みエラー:', error);
+                addDebugLog('データ読み込みエラー:', error);
                 elements.syncStatus.textContent = 'データ同期状態: エラー';
                 return false;
             }
@@ -501,7 +551,7 @@
                 // テーブルをクリア
                 tableBody.innerHTML = '';
                 
-                if (expenses.length === 0) {
+                if (!expenses || expenses.length === 0) {
                     const emptyRow = document.createElement('tr');
                     emptyRow.innerHTML = `
                         <td colspan="4" class="border p-2 text-center text-gray-500">
@@ -520,7 +570,7 @@
                         row.innerHTML = `
                             <td class="border p-2">${expense.date}</td>
                             <td class="border p-2">${expense.description}</td>
-                            <td class="border p-2 text-right ${amountClass}">${expense.amount.toLocaleString()}</td>
+                            <td class="border p-2 text-right ${amountClass}">${parseFloat(expense.amount).toLocaleString()}</td>
                             <td class="border p-2 text-center">
                                 <button
                                     data-id="${expense.id}"
@@ -560,10 +610,10 @@
         // 合計金額の更新
         function updateTotals() {
             for (const userId in appState.expenses) {
-                const expenses = appState.expenses[userId];
-                const carryOver = appState.carryOver[userId] || 0;
+                const expenses = appState.expenses[userId] || [];
+                const carryOver = parseFloat(appState.carryOver[userId]) || 0;
                 
-                const currentTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                const currentTotal = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
                 const total = currentTotal + carryOver;
                 
                 document.getElementById(`${userId}-carryover`).textContent = formatCurrency(carryOver);
@@ -598,10 +648,10 @@
                 const regularItems = appState.regularExpenses[userId];
                 
                 // 支出データから定期支出が入力されているかチェック
-                const expenses = appState.expenses[userId];
+                const expenses = appState.expenses[userId] || [];
                 regularItems.forEach(item => {
                     item.checked = expenses.some(expense => 
-                        expense.description.includes(item.description)
+                        expense.description && expense.description.includes(item.description)
                     );
                 });
                 
@@ -621,82 +671,82 @@
                                 data-user="${userId}"
                                 data-index="${index}"
                             />
-                            <span class="font-medium">${item.description}</span>
-                        </div>
-                        <span class="${item.checked ? 'text-green-600' : 'text-red-600'}">
-                            ${item.checked ? '入力済み' : '未入力'}
-                        </span>
-                    `;
-                    
-                    container.appendChild(itemElement);
-                    
-                    // チェックボックスにイベントリスナーを追加
-                    const checkbox = itemElement.querySelector('input[type="checkbox"]');
-                    checkbox.addEventListener('change', function() {
-                        const userId = this.getAttribute('data-user');
-                        const index = parseInt(this.getAttribute('data-index'));
-                        
-                        toggleRegularExpenseCheck(userId, index);
-                    });
-                });
-                
-                // 警告表示の制御
-                const hasUncheckedItems = regularItems.some(item => !item.checked);
-                warning.style.display = hasUncheckedItems ? 'block' : 'none';
-            }
-        }
+                           <span class="font-medium">${item.description}</span>
+                       </div>
+                       <span class="${item.checked ? 'text-green-600' : 'text-red-600'}">
+                           ${item.checked ? '入力済み' : '未入力'}
+                       </span>
+                   `;
+                   
+                   container.appendChild(itemElement);
+                   
+                   // チェックボックスにイベントリスナーを追加
+                   const checkbox = itemElement.querySelector('input[type="checkbox"]');
+                   checkbox.addEventListener('change', function() {
+                       const userId = this.getAttribute('data-user');
+                       const index = parseInt(this.getAttribute('data-index'));
+                       
+                       toggleRegularExpenseCheck(userId, index);
+                   });
+               });
+               
+               // 警告表示の制御
+               const hasUncheckedItems = regularItems.some(item => !item.checked);
+               warning.style.display = hasUncheckedItems ? 'block' : 'none';
+           }
+       }
 
-        // 精算画面の更新
-        function updateSettlementUI() {
-            for (const userId in appState.expenses) {
-                const total = calculateTotal(userId);
-                const refundInput = document.getElementById(`${userId}-refund`);
-                const nextCarryover = document.getElementById(`${userId}-next-carryover`);
-                
-                document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
-                
-                // 返金額の変更イベント
-                refundInput.addEventListener('input', function() {
-                    const refundAmount = parseFloat(this.value) || 0;
-                    appState.refundAmounts[userId] = refundAmount;
-                    nextCarryover.textContent = formatCurrency(total - refundAmount);
-                });
-                
-                // 初期表示
-                const refundAmount = appState.refundAmounts[userId] || 0;
-                refundInput.value = refundAmount;
-                nextCarryover.textContent = formatCurrency(total - refundAmount);
-            }
-        }
+       // 精算画面の更新
+       function updateSettlementUI() {
+           for (const userId in appState.expenses) {
+               const total = calculateTotal(userId);
+               const refundInput = document.getElementById(`${userId}-refund`);
+               const nextCarryover = document.getElementById(`${userId}-next-carryover`);
+               
+               document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
+               
+               // 返金額の変更イベント
+               refundInput.addEventListener('input', function() {
+                   const refundAmount = parseFloat(this.value) || 0;
+                   appState.refundAmounts[userId] = refundAmount;
+                   nextCarryover.textContent = formatCurrency(total - refundAmount);
+               });
+               
+               // 初期表示
+               const refundAmount = appState.refundAmounts[userId] || 0;
+               refundInput.value = refundAmount;
+               nextCarryover.textContent = formatCurrency(total - refundAmount);
+           }
+       }
 
-        // 合計金額の計算
-        function calculateTotal(userId) {
-            const expenses = appState.expenses[userId];
-            const carryOver = appState.carryOver[userId] || 0;
-            
-            return expenses.reduce((sum, expense) => sum + expense.amount, 0) + carryOver;
-        }
+       // 合計金額の計算
+       function calculateTotal(userId) {
+           const expenses = appState.expenses[userId] || [];
+           const carryOver = parseFloat(appState.carryOver[userId]) || 0;
+           
+           return expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0) + carryOver;
+       }
 
-        // 支出の追加
-        async function addExpense(e) {
-            e.preventDefault();
-            
-            // 入力値の取得
-            const userId = elements.userSelect.value;
-            const date = elements.dateInput.value.trim();
-            const description = elements.descriptionInput.value.trim();
-            const amountStr = elements.amountInput.value.trim();
-            
-            // バリデーション
-            if (!date || !description || !amountStr) {
-                alert('すべての項目を入力してください');
-                return;
-            }
-            
-            const amount = parseFloat(amountStr.replace(/,/g, ''));
-            
-            if (isNaN(amount)) {
-                alert('金額は数値で入力してください');
+       // 支出の追加
+       async function addExpense(e) {
+           e.preventDefault();
+           
+           // 入力値の取得
+           const userId = elements.userSelect.value;
+           const date = elements.dateInput.value.trim();
+           const description = elements.descriptionInput.value.trim();
+           const amountStr = elements.amountInput.value.trim();
+           
+           // バリデーション
+           if (!date || !description || !amountStr) {
+               alert('すべての項目を入力してください');
+               return;
+           }
+           
+           const amount = parseFloat(amountStr.replace(/,/g, ''));
+           
+           if (isNaN(amount)) {
+               alert('金額は数値で入力してください');
                return;
            }
            
@@ -705,6 +755,15 @@
                // 編集は現在のGAS実装では対応していないため、削除して再追加する形で対応
                await deleteExpense(userId, appState.editingExpense.id, true);
            }
+           
+           addDebugLog('支出データを保存します', {
+               userId,
+               date,
+               description,
+               amount,
+               year: appState.currentYear,
+               month: appState.currentMonth
+           });
            
            // GASに新しい支出を追加
            const result = await callAPI('saveExpense', {
@@ -718,7 +777,9 @@
                })
            });
            
-           if (result.success) {
+           if (result && result.success) {
+               addDebugLog('支出データの保存に成功しました', result);
+               
                // 成功したら、データを再読み込み
                await loadData();
                
@@ -732,15 +793,21 @@
                    elements.submitButton.textContent = '追加';
                    elements.cancelButton.classList.add('hidden');
                }
+           } else {
+               addDebugLog('支出データの保存に失敗しました', result);
+               alert('支出の保存に失敗しました。後でもう一度お試しください。');
            }
        }
 
        // 支出の編集
        function editExpense(userId, expenseId) {
-           const expenses = appState.expenses[userId];
+           const expenses = appState.expenses[userId] || [];
            const expense = expenses.find(item => item.id === expenseId);
            
-           if (!expense) return;
+           if (!expense) {
+               addDebugLog('編集対象の支出が見つかりません', { userId, expenseId });
+               return;
+           }
            
            // 編集対象を保存
            appState.editingExpense = expense;
@@ -768,21 +835,24 @@
                return;
            }
            
+           addDebugLog('支出データを削除します', { userId, expenseId });
+           
            try {
                // GAS側のdeleteExpense機能を呼び出す
                const result = await callAPI('deleteExpense', {
                    id: expenseId
                });
                
-               if (result.success) {
-                   console.log('支出を削除しました: ', expenseId);
+               if (result && result.success) {
+                   addDebugLog('支出データの削除に成功しました', { expenseId });
                    // データを再読み込み
                    await loadData();
                } else {
-                   throw new Error(result.error || '削除処理に失敗しました');
+                   addDebugLog('支出データの削除に失敗しました', result);
+                   throw new Error(result && result.error ? result.error : '削除処理に失敗しました');
                }
            } catch (error) {
-               console.error('削除エラー:', error);
+               addDebugLog('削除エラー:', error);
                alert(`削除中にエラーが発生しました: ${error.message}`);
            }
        }
@@ -803,6 +873,8 @@
                return;
            }
            
+           addDebugLog('月末清算を開始します');
+           
            try {
                // 各ユーザーの精算処理
                for (const userId in appState.expenses) {
@@ -810,20 +882,26 @@
                    const refundAmount = parseFloat(document.getElementById(`${userId}-refund`).value) || 0;
                    const nextCarryOver = total - refundAmount;
                    
+                   const settlementData = {
+                       userId: userId,
+                       year: appState.currentYear,
+                       month: appState.currentMonth,
+                       currentTotal: total,
+                       refund: refundAmount,
+                       nextCarryOver: nextCarryOver
+                   };
+                   
+                   addDebugLog(`${userId}の精算データ`, settlementData);
+                   
                    // 精算処理をGASに送信
                    const result = await callAPI('settlement', {
-                       data: JSON.stringify({
-                           userId: userId,
-                           year: appState.currentYear,
-                           month: appState.currentMonth,
-                           currentTotal: total,
-                           refund: refundAmount,
-                           nextCarryOver: nextCarryOver
-                       })
+                       data: JSON.stringify(settlementData)
                    });
                    
-                   if (!result.success) {
-                       throw new Error(`${appState.users[userId].name}の精算処理に失敗しました`);
+                   if (!result || !result.success) {
+                       const errorMsg = `${appState.users[userId].name}の精算処理に失敗しました`;
+                       addDebugLog(errorMsg, result);
+                       throw new Error(errorMsg);
                    }
                }
                
@@ -843,9 +921,10 @@
                    user2: 0
                };
                
+               addDebugLog('精算処理が完了しました');
                alert('精算が完了しました。翌月へ持ち越しました。');
            } catch (error) {
-               console.error('精算処理エラー:', error);
+               addDebugLog('精算処理エラー:', error);
                alert(`精算処理中にエラーが発生しました: ${error.message}`);
            }
        }
@@ -882,6 +961,17 @@
            loadData();
        }
 
+       // デバッグモード切替
+       function toggleDebugMode() {
+           appState.debugMode = !appState.debugMode;
+           elements.debugInfo.style.display = appState.debugMode ? 'block' : 'none';
+       }
+
+       // デバッグログクリア
+       function clearDebugLog() {
+           elements.debugOutput.textContent = '';
+       }
+
        // イベントリスナーの設定
        function setupEventListeners() {
            // 前月ボタン
@@ -908,15 +998,33 @@
            
            // 同期ボタン
            elements.syncButton.addEventListener('click', loadData);
+           
+           // デバッグ関連
+           elements.toggleDebug.addEventListener('click', toggleDebugMode);
+           elements.clearDebug.addEventListener('click', clearDebugLog);
+           
+           // キーボードショートカット
+           document.addEventListener('keydown', function(event) {
+               // Ctrl+D でデバッグモード切替
+               if (event.ctrlKey && event.key === 'd') {
+                   event.preventDefault();
+                   toggleDebugMode();
+               }
+           });
        }
 
        // アプリの初期化
        async function initApp() {
+           // デバッグモード初期化
+           elements.debugInfo.style.display = 'none';
+           
            // イベントリスナーを設定
            setupEventListeners();
            
-           // データを読み込み
+           // 初期データ読み込み
+           addDebugLog('アプリを初期化しています');
            await loadData();
+           addDebugLog('初期化完了');
        }
 
        // アプリを初期化
