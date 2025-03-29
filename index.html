@@ -270,7 +270,7 @@
 
     <script>
         // APIのURL (GASのウェブアプリURL)
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwfDg0e2ZCueMq_39tKSbvxjNawTXo8Enl3X6H-FNLgN2N41WrANIOQpArcwpJ04Zfp/exec'
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxgvuwdixwKcbxkTnekBiGWTzYoiE4zrm86lfFKbX2KSXIu1jI23If6w2x8XNhS4vT_/exec';
         
         // アプリケーションの状態
         const appState = {
@@ -342,31 +342,53 @@
             syncButton: document.getElementById('syncButton')
         };
 
-        // APIにリクエストを送信する関数 - 修正版
+        // JSONP形式でAPIを呼び出す関数
         async function callAPI(action, params = {}) {
             try {
                 console.log(`API呼び出し: ${action}`, params);
                 
-                const url = new URL(API_URL);
-                url.searchParams.append('action', action);
-                
-                // パラメータを追加
-                Object.keys(params).forEach(key => {
-                    url.searchParams.append(key, params[key]);
+                return new Promise((resolve, reject) => {
+                    // ユニークなコールバック関数名を生成
+                    const callbackName = 'jsonpCallback_' + Math.random().toString(36).substring(2, 15);
+                    
+                    // グローバルスコープにコールバック関数を定義
+                    window[callbackName] = function(data) {
+                        // コールバック関数の後始末
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        
+                        console.log(`API応答: ${action}`, data);
+                        
+                        if (data.success) {
+                            resolve(data);
+                        } else {
+                            reject(new Error(data.error || '不明なエラーが発生しました'));
+                        }
+                    };
+                    
+                    // パラメータを構築
+                    const queryParams = new URLSearchParams({
+                        action: action,
+                        callback: callbackName,
+                        ...params
+                    });
+                    
+                    // APIのURL
+                    const url = `${API_URL}?${queryParams.toString()}`;
+                    console.log(`リクエストURL: ${url}`);
+                    
+                    // scriptタグを作成してDOMに追加
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onerror = () => {
+                        // エラーハンドリング
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        reject(new Error('API呼び出しに失敗しました'));
+                    };
+                    
+                    document.head.appendChild(script);
                 });
-                
-                console.log(`リクエストURL: ${url.toString()}`);
-                
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                console.log(`API応答: ${action}`, data);
-                
-                if (data.success) {
-                    return data;
-                } else {
-                    throw new Error(data.error || '不明なエラーが発生しました');
-                }
             } catch (error) {
                 console.error(`API呼び出しエラー (${action}):`, error);
                 alert(`データの取得中にエラーが発生しました: ${error.message}`);
@@ -374,7 +396,7 @@
             }
         }
 
-        // データの読み込み - 修正版
+        // データの読み込み
         async function loadData() {
             try {
                 elements.syncStatus.textContent = 'データ同期状態: 更新中...';
@@ -669,230 +691,230 @@
             
             if (isNaN(amount)) {
                 alert('金額は数値で入力してください');
-                return;
-            }
-            
-            // 編集モードの場合
-            if (appState.editingExpense) {
-                // 編集は現在のGAS実装では対応していないため、削除して再追加する形で対応
-                await deleteExpense(userId, appState.editingExpense.id, true);
-            }
-            
-            // GASに新しい支出を追加
-            const result = await callAPI('saveExpense', {
-                data: JSON.stringify({
-                    userId: userId,
-                    date: date,
-                    description: description,
-                    amount: amount,
-                    year: appState.currentYear,
-                    month: appState.currentMonth
-                })
-            });
-            
-            if (result.success) {
-                // 成功したら、データを再読み込み
-                await loadData();
-                
-                // フォームをリセット
-                elements.expenseForm.reset();
-                
-                // 編集モードをリセット
-                if (appState.editingExpense) {
-                    appState.editingExpense = null;
-                    elements.formTitle.textContent = '新規支出の追加';
-                    elements.submitButton.textContent = '追加';
-                    elements.cancelButton.classList.add('hidden');
-                }
-            }
-        }
+               return;
+           }
+           
+           // 編集モードの場合
+           if (appState.editingExpense) {
+               // 編集は現在のGAS実装では対応していないため、削除して再追加する形で対応
+               await deleteExpense(userId, appState.editingExpense.id, true);
+           }
+           
+           // GASに新しい支出を追加
+           const result = await callAPI('saveExpense', {
+               data: JSON.stringify({
+                   userId: userId,
+                   date: date,
+                   description: description,
+                   amount: amount,
+                   year: appState.currentYear,
+                   month: appState.currentMonth
+               })
+           });
+           
+           if (result.success) {
+               // 成功したら、データを再読み込み
+               await loadData();
+               
+               // フォームをリセット
+               elements.expenseForm.reset();
+               
+               // 編集モードをリセット
+               if (appState.editingExpense) {
+                   appState.editingExpense = null;
+                   elements.formTitle.textContent = '新規支出の追加';
+                   elements.submitButton.textContent = '追加';
+                   elements.cancelButton.classList.add('hidden');
+               }
+           }
+       }
 
-        // 支出の編集
-        function editExpense(userId, expenseId) {
-            const expenses = appState.expenses[userId];
-            const expense = expenses.find(item => item.id === expenseId);
-            
-            if (!expense) return;
-            
-            // 編集対象を保存
-            appState.editingExpense = expense;
-            
-            // フォームに値をセット
-            elements.userSelect.value = userId;
-            elements.dateInput.value = expense.date;
-            elements.descriptionInput.value = expense.description;
-            elements.amountInput.value = expense.amount;
-            
-            // フォームタイトルと送信ボタンのテキストを変更
-            elements.formTitle.textContent = '支出の編集';
-            elements.submitButton.textContent = '保存';
-            
-            // キャンセルボタンを表示
-            elements.cancelButton.classList.remove('hidden');
-            
-            // フォームまでスクロール
-            elements.expenseForm.scrollIntoView({ behavior: 'smooth' });
-        }
+       // 支出の編集
+       function editExpense(userId, expenseId) {
+           const expenses = appState.expenses[userId];
+           const expense = expenses.find(item => item.id === expenseId);
+           
+           if (!expense) return;
+           
+           // 編集対象を保存
+           appState.editingExpense = expense;
+           
+           // フォームに値をセット
+           elements.userSelect.value = userId;
+           elements.dateInput.value = expense.date;
+           elements.descriptionInput.value = expense.description;
+           elements.amountInput.value = expense.amount;
+           
+           // フォームタイトルと送信ボタンのテキストを変更
+           elements.formTitle.textContent = '支出の編集';
+           elements.submitButton.textContent = '保存';
+           
+           // キャンセルボタンを表示
+           elements.cancelButton.classList.remove('hidden');
+           
+           // フォームまでスクロール
+           elements.expenseForm.scrollIntoView({ behavior: 'smooth' });
+       }
 
-        // 支出の削除 - 修正版
-        async function deleteExpense(userId, expenseId, skipConfirm = false) {
-            if (!skipConfirm && !confirm('この支出を削除してもよろしいですか？')) {
-                return;
-            }
-            
-            try {
-                // GAS側のdeleteExpense機能を呼び出す
-                const result = await callAPI('deleteExpense', {
-                    id: expenseId
-                });
-                
-                if (result.success) {
-                    console.log('支出を削除しました: ', expenseId);
-                    // データを再読み込み
-                    await loadData();
-                } else {
-                    throw new Error(result.error || '削除処理に失敗しました');
-                }
-            } catch (error) {
-                console.error('削除エラー:', error);
-                alert(`削除中にエラーが発生しました: ${error.message}`);
-            }
-        }
+       // 支出の削除
+       async function deleteExpense(userId, expenseId, skipConfirm = false) {
+           if (!skipConfirm && !confirm('この支出を削除してもよろしいですか？')) {
+               return;
+           }
+           
+           try {
+               // GAS側のdeleteExpense機能を呼び出す
+               const result = await callAPI('deleteExpense', {
+                   id: expenseId
+               });
+               
+               if (result.success) {
+                   console.log('支出を削除しました: ', expenseId);
+                   // データを再読み込み
+                   await loadData();
+               } else {
+                   throw new Error(result.error || '削除処理に失敗しました');
+               }
+           } catch (error) {
+               console.error('削除エラー:', error);
+               alert(`削除中にエラーが発生しました: ${error.message}`);
+           }
+       }
 
-        // 定期支出のチェック切り替え
-        function toggleRegularExpenseCheck(userId, index) {
-            const regularItems = appState.regularExpenses[userId];
-            
-            if (regularItems[index]) {
-                regularItems[index].checked = !regularItems[index].checked;
-                updateRegularExpenses();
-            }
-        }
+       // 定期支出のチェック切り替え
+       function toggleRegularExpenseCheck(userId, index) {
+           const regularItems = appState.regularExpenses[userId];
+           
+           if (regularItems[index]) {
+               regularItems[index].checked = !regularItems[index].checked;
+               updateRegularExpenses();
+           }
+       }
 
-        // 月末清算
-        async function handleSettlement() {
-            if (!confirm(`${appState.currentYear}年${appState.currentMonth}月の精算を行いますか？`)) {
-                return;
-            }
-            
-            try {
-                // 各ユーザーの精算処理
-                for (const userId in appState.expenses) {
-                    const total = calculateTotal(userId);
-                    const refundAmount = parseFloat(document.getElementById(`${userId}-refund`).value) || 0;
-                    const nextCarryOver = total - refundAmount;
-                    
-                    // 精算処理をGASに送信
-                    const result = await callAPI('settlement', {
-                        data: JSON.stringify({
-                            userId: userId,
-                            year: appState.currentYear,
-                            month: appState.currentMonth,
-                            currentTotal: total,
-                            refund: refundAmount,
-                            nextCarryOver: nextCarryOver
-                        })
-                    });
-                    
-                    if (!result.success) {
-                        throw new Error(`${appState.users[userId].name}の精算処理に失敗しました`);
-                    }
-                }
-                
-                // 月を進める
-                const nextMonth = appState.currentMonth === 12 ? 1 : appState.currentMonth + 1;
-                const nextYear = appState.currentMonth === 12 ? appState.currentYear + 1 : appState.currentYear;
-                
-                appState.currentMonth = nextMonth;
-                appState.currentYear = nextYear;
-                
-                // データを再読み込み
-                await loadData();
-                
-                // 返金額をリセット
-                appState.refundAmounts = {
-                    user1: 0,
-                    user2: 0
-                };
-                
-                alert('精算が完了しました。翌月へ持ち越しました。');
-            } catch (error) {
-                console.error('精算処理エラー:', error);
-                alert(`精算処理中にエラーが発生しました: ${error.message}`);
-            }
-        }
+       // 月末清算
+       async function handleSettlement() {
+           if (!confirm(`${appState.currentYear}年${appState.currentMonth}月の精算を行いますか？`)) {
+               return;
+           }
+           
+           try {
+               // 各ユーザーの精算処理
+               for (const userId in appState.expenses) {
+                   const total = calculateTotal(userId);
+                   const refundAmount = parseFloat(document.getElementById(`${userId}-refund`).value) || 0;
+                   const nextCarryOver = total - refundAmount;
+                   
+                   // 精算処理をGASに送信
+                   const result = await callAPI('settlement', {
+                       data: JSON.stringify({
+                           userId: userId,
+                           year: appState.currentYear,
+                           month: appState.currentMonth,
+                           currentTotal: total,
+                           refund: refundAmount,
+                           nextCarryOver: nextCarryOver
+                       })
+                   });
+                   
+                   if (!result.success) {
+                       throw new Error(`${appState.users[userId].name}の精算処理に失敗しました`);
+                   }
+               }
+               
+               // 月を進める
+               const nextMonth = appState.currentMonth === 12 ? 1 : appState.currentMonth + 1;
+               const nextYear = appState.currentMonth === 12 ? appState.currentYear + 1 : appState.currentYear;
+               
+               appState.currentMonth = nextMonth;
+               appState.currentYear = nextYear;
+               
+               // データを再読み込み
+               await loadData();
+               
+               // 返金額をリセット
+               appState.refundAmounts = {
+                   user1: 0,
+                   user2: 0
+               };
+               
+               alert('精算が完了しました。翌月へ持ち越しました。');
+           } catch (error) {
+               console.error('精算処理エラー:', error);
+               alert(`精算処理中にエラーが発生しました: ${error.message}`);
+           }
+       }
 
-        // 前月ボタンのイベントハンドラ
-        function goToPrevMonth() {
-            let newMonth = appState.currentMonth - 1;
-            let newYear = appState.currentYear;
-            
-            if (newMonth < 1) {
-                newMonth = 12;
-                newYear--;
-            }
-            
-            appState.currentMonth = newMonth;
-            appState.currentYear = newYear;
-            
-            loadData();
-        }
+       // 前月ボタンのイベントハンドラ
+       function goToPrevMonth() {
+           let newMonth = appState.currentMonth - 1;
+           let newYear = appState.currentYear;
+           
+           if (newMonth < 1) {
+               newMonth = 12;
+               newYear--;
+           }
+           
+           appState.currentMonth = newMonth;
+           appState.currentYear = newYear;
+           
+           loadData();
+       }
 
-        // 次月ボタンのイベントハンドラ
-        function goToNextMonth() {
-            let newMonth = appState.currentMonth + 1;
-            let newYear = appState.currentYear;
-            
-            if (newMonth > 12) {
-                newMonth = 1;
-                newYear++;
-            }
-            
-            appState.currentMonth = newMonth;
-            appState.currentYear = newYear;
-            
-            loadData();
-        }
+       // 次月ボタンのイベントハンドラ
+       function goToNextMonth() {
+           let newMonth = appState.currentMonth + 1;
+           let newYear = appState.currentYear;
+           
+           if (newMonth > 12) {
+               newMonth = 1;
+               newYear++;
+           }
+           
+           appState.currentMonth = newMonth;
+           appState.currentYear = newYear;
+           
+           loadData();
+       }
 
-        // イベントリスナーの設定
-        function setupEventListeners() {
-            // 前月ボタン
-            elements.prevMonthButton.addEventListener('click', goToPrevMonth);
-            
-            // 次月ボタン
-            elements.nextMonthButton.addEventListener('click', goToNextMonth);
-            
-            // 支出フォーム送信
-            elements.expenseForm.addEventListener('submit', addExpense);
-            
-            // キャンセルボタン
-            elements.cancelButton.addEventListener('click', function() {
-                // 編集をキャンセル
-                appState.editingExpense = null;
-                elements.formTitle.textContent = '新規支出の追加';
-                elements.submitButton.textContent = '追加';
-                elements.cancelButton.classList.add('hidden');
-                elements.expenseForm.reset();
-            });
-            
-            // 清算ボタン
-            elements.settlementButton.addEventListener('click', handleSettlement);
-            
-            // 同期ボタン
-            elements.syncButton.addEventListener('click', loadData);
-        }
+       // イベントリスナーの設定
+       function setupEventListeners() {
+           // 前月ボタン
+           elements.prevMonthButton.addEventListener('click', goToPrevMonth);
+           
+           // 次月ボタン
+           elements.nextMonthButton.addEventListener('click', goToNextMonth);
+           
+           // 支出フォーム送信
+           elements.expenseForm.addEventListener('submit', addExpense);
+           
+           // キャンセルボタン
+           elements.cancelButton.addEventListener('click', function() {
+               // 編集をキャンセル
+               appState.editingExpense = null;
+               elements.formTitle.textContent = '新規支出の追加';
+               elements.submitButton.textContent = '追加';
+               elements.cancelButton.classList.add('hidden');
+               elements.expenseForm.reset();
+           });
+           
+           // 清算ボタン
+           elements.settlementButton.addEventListener('click', handleSettlement);
+           
+           // 同期ボタン
+           elements.syncButton.addEventListener('click', loadData);
+       }
 
-        // アプリの初期化
-        async function initApp() {
-            // イベントリスナーを設定
-            setupEventListeners();
-            
-            // データを読み込み
-            await loadData();
-        }
+       // アプリの初期化
+       async function initApp() {
+           // イベントリスナーを設定
+           setupEventListeners();
+           
+           // データを読み込み
+           await loadData();
+       }
 
-        // アプリを初期化
-        initApp();
-    </script>
+       // アプリを初期化
+       initApp();
+   </script>
 </body>
 </html>
