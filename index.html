@@ -448,54 +448,41 @@
             });
         }
 
-        // データの読み込み
+        // データの読み込み - 最適化版
         async function loadData() {
             try {
                 elements.syncStatus.textContent = 'データ同期状態: 更新中...';
                 
-                // 各ユーザーの支出データを取得
-                for (const userId in appState.expenses) {
-                    addDebugLog(`${userId}の支出データを取得します...`);
-                    addDebugLog(`パラメータ: year=${appState.currentYear}, month=${appState.currentMonth}`);
-                    
-                    try {
-                        const result = await callAPI('getExpenses', {
-                            userId: userId,
-                            year: appState.currentYear,
-                            month: appState.currentMonth
-                        });
-                        
-                        if (result && (result.success !== false) && result.expenses) {
-                            appState.expenses[userId] = result.expenses || [];
-                            addDebugLog(`${userId}の支出データ ${appState.expenses[userId].length}件取得`);
-                        } else {
-                            addDebugLog(`${userId}の支出データ取得に失敗:`, result ? result.error : '不明なエラー');
-                            // エラー時は空の配列にリセット
-                            appState.expenses[userId] = [];
+                // バッチ処理でデータを一度に取得
+                const batchResult = await callAPI('getBatchData', {
+                    year: appState.currentYear,
+                    month: appState.currentMonth
+                });
+                
+                if (batchResult && batchResult.success) {
+                    // データを状態に反映
+                    if (batchResult.expenses) {
+                        for (const userId in batchResult.expenses) {
+                            appState.expenses[userId] = batchResult.expenses[userId] || [];
                         }
-                        
-                        // 持ち越しデータを取得
-                        const carryOverResult = await callAPI('getCarryOver', {
-                            userId: userId,
-                            year: appState.currentYear,
-                            month: appState.currentMonth
-                        });
-                        
-                        if (carryOverResult && (carryOverResult.success !== false) && carryOverResult.carryOver !== undefined) {
-                            appState.carryOver[userId] = parseFloat(carryOverResult.carryOver) || 0;
-                            addDebugLog(`${userId}の持越金額: ${appState.carryOver[userId]}`);
-                        } else {
-                            addDebugLog(`${userId}の持越金額取得に失敗:`, carryOverResult ? carryOverResult.error : '不明なエラー');
-                            // エラー時は0にリセット
-                            appState.carryOver[userId] = 0;
-                        }
-                    } catch (error) {
-                        addDebugLog(`${userId}のデータ取得中にエラー:`, error);
                     }
+                    
+                    if (batchResult.carryOver) {
+                        for (const userId in batchResult.carryOver) {
+                            appState.carryOver[userId] = parseFloat(batchResult.carryOver[userId]) || 0;
+                        }
+                    }
+                    
+                    addDebugLog('バッチデータ取得成功', batchResult);
+                } else {
+                    addDebugLog('バッチデータ取得失敗', batchResult);
                 }
                 
-                updateUI();
-                elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
+                // UI更新を最適化（requestAnimationFrameを使用）
+                window.requestAnimationFrame(() => {
+                    updateUI();
+                    elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
+                });
                 
                 return true;
             } catch (error) {
@@ -520,27 +507,55 @@
             return new Date(year, month, 0).getDate();
         }
 
-        // 表示の更新
+        // デバウンス関数
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+        
+        // 表示の更新 - 最適化版
         function updateUI() {
-            // 月表示の更新
+            // 月表示の更新（即時反映が必要な部分）
             elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
             
             // 清算日表示の更新
             const lastDay = getLastDayOfMonth(appState.currentYear, appState.currentMonth);
             elements.settlementDate.textContent = `清算日: ${appState.currentYear}年${appState.currentMonth}月${lastDay}日`;
             
-            // 支出テーブルの更新
-            updateExpenseTables();
-            
-            // 集計の更新
-            updateTotals();
-            
-            // 定期支出チェックの更新
-            updateRegularExpenses();
-            
-            // 精算画面の更新
-            updateSettlementUI();
+            // 重い処理はrequestAnimationFrameで実行
+            window.requestAnimationFrame(() => {
+                // 支出テーブルの更新
+                updateExpenseTables();
+                
+                // 集計の更新
+                updateTotals();
+                
+                // 低優先度の更新は遅延実行
+                setTimeout(() => {
+                    // 定期支出チェックの更新
+                    updateRegularExpenses();
+                    
+                    // 精算画面の更新
+                    updateSettlementUI();
+                }, 10);
+            });
         }
+        
+        // 部分的な更新のためのメソッドを追加
+        function updateExpenseTablesForUser(userId) {
+            const tableBody = document.getElementById(`${userId}-expenses`);
+            const expenses = appState.expenses[userId] || [];
+            
+            // テーブル更新処理（既存の更新関数から抽出）
+            // ...
+        }
+        
+        // デバウンスされた更新関数
+        const debouncedUpdateRegularExpenses = debounce(updateRegularExpenses, 100);
+        const debouncedUpdateSettlementUI = debounce(updateSettlementUI, 100);
 
         // 支出テーブルの更新
         function updateExpenseTables() {
@@ -929,21 +944,39 @@
            }
        }
 
-       // 前月ボタンのイベントハンドラ
-       function goToPrevMonth() {
-           let newMonth = appState.currentMonth - 1;
-           let newYear = appState.currentYear;
-           
-           if (newMonth < 1) {
-               newMonth = 12;
-               newYear--;
-           }
-           
-           appState.currentMonth = newMonth;
-           appState.currentYear = newYear;
-           
-           loadData();
-       }
+       // 月の移動を扱う関数 - 最適化版
+        function changeMonth(direction) {
+            // 状態更新
+            let newMonth = appState.currentMonth + direction;
+            let newYear = appState.currentYear;
+            
+            if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            } else if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            }
+            
+            appState.currentMonth = newMonth;
+            appState.currentYear = newYear;
+            
+            // 即時に月表示だけ更新してユーザー体験を向上
+            elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
+            
+            // データロードは少し遅延させる
+            setTimeout(() => loadData(), 50);
+        }
+        
+        // 前月ボタンのイベントハンドラ - 最適化版
+        function goToPrevMonth() {
+            changeMonth(-1);
+        }
+        
+        // 次月ボタンのイベントハンドラ - 最適化版
+        function goToNextMonth() {
+            changeMonth(1);
+        }
 
        // 次月ボタンのイベントハンドラ
        function goToNextMonth() {
