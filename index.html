@@ -622,6 +622,120 @@
             }
         }
 
+        async function addExpense(e) {
+            e.preventDefault();
+            
+            // ボタンを無効化して視覚的フィードバックを提供
+            elements.submitButton.disabled = true;
+            elements.submitButton.textContent = '保存中...';
+            
+            try {
+                // 入力値の取得
+                const userId = elements.userSelect.value;
+                const date = elements.dateInput.value.trim();
+                const description = elements.descriptionInput.value.trim();
+                const amountStr = elements.amountInput.value.trim();
+                
+                // バリデーション
+                if (!date || !description || !amountStr) {
+                    alert('すべての項目を入力してください');
+                    return;
+                }
+                
+                const amount = parseFloat(amountStr.replace(/,/g, ''));
+                
+                if (isNaN(amount)) {
+                    alert('金額は数値で入力してください');
+                    return;
+                }
+                
+                // 新しい支出オブジェクトの作成
+                const newExpense = {
+                    userId: userId,
+                    date: date,
+                    description: description,
+                    amount: amount,
+                    year: appState.currentYear,
+                    month: appState.currentMonth
+                };
+                
+                // 一時的なIDの生成
+                const tempId = 'temp_' + Date.now();
+                
+                // 編集モードの場合
+                if (appState.editingExpense) {
+                    // ローカルの状態から古いデータを削除
+                    const index = appState.expenses[userId].findIndex(item => item.id === appState.editingExpense.id);
+                    if (index !== -1) {
+                        appState.expenses[userId].splice(index, 1);
+                    }
+                    
+                    // サーバーでの削除処理は非同期で行う（結果を待たない）
+                    deleteExpense(userId, appState.editingExpense.id, true);
+                }
+                
+                // 一時的にローカルの状態に追加（即時反映）
+                appState.expenses[userId].push({
+                    id: tempId,
+                    ...newExpense
+                });
+                
+                // UIをすぐに更新
+                updateSingleUserExpenses(userId);
+                updateTotals();
+                
+                addDebugLog('支出データを保存します', newExpense);
+                
+                // サーバーに保存（バックグラウンドで）
+                const result = await callAPI('saveExpense', {
+                    data: JSON.stringify(newExpense)
+                });
+                
+                if (result && result.success) {
+                    addDebugLog('支出データの保存に成功しました', result);
+                    
+                    // 一時IDを実際のIDに置き換え
+                    const realId = result.id;
+                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
+                    if (index !== -1) {
+                        appState.expenses[userId][index].id = realId;
+                    }
+                    
+                    // フォームをリセット
+                    elements.expenseForm.reset();
+                    
+                    // 定期支出の状態を更新
+                    updateRegularExpenses();
+                    
+                    // 編集モードをリセット
+                    if (appState.editingExpense) {
+                        appState.editingExpense = null;
+                        elements.formTitle.textContent = '新規支出の追加';
+                        elements.cancelButton.classList.add('hidden');
+                    }
+                } else {
+                    addDebugLog('支出データの保存に失敗しました', result);
+                    
+                    // エラー時は一時データを削除
+                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
+                    if (index !== -1) {
+                        appState.expenses[userId].splice(index, 1);
+                        updateSingleUserExpenses(userId);
+                        updateTotals();
+                    }
+                    
+                    alert('支出の保存に失敗しました。後でもう一度お試しください。');
+                }
+            } catch (error) {
+                addDebugLog('支出追加処理エラー:', error);
+                alert(`エラーが発生しました: ${error.message}`);
+            } finally {
+                // 必ずボタンを元に戻す
+                elements.submitButton.disabled = false;
+                elements.submitButton.textContent = '追加';
+            }
+        }
+        
         // 合計金額の更新
         function updateTotals() {
             for (const userId in appState.expenses) {
@@ -742,77 +856,119 @@
            return expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0) + carryOver;
        }
 
-       // 支出の追加
        async function addExpense(e) {
-           e.preventDefault();
-           
-           // 入力値の取得
-           const userId = elements.userSelect.value;
-           const date = elements.dateInput.value.trim();
-           const description = elements.descriptionInput.value.trim();
-           const amountStr = elements.amountInput.value.trim();
-           
-           // バリデーション
-           if (!date || !description || !amountStr) {
-               alert('すべての項目を入力してください');
-               return;
-           }
-           
-           const amount = parseFloat(amountStr.replace(/,/g, ''));
-           
-           if (isNaN(amount)) {
-               alert('金額は数値で入力してください');
-               return;
-           }
-           
-           // 編集モードの場合
-           if (appState.editingExpense) {
-               // 編集は現在のGAS実装では対応していないため、削除して再追加する形で対応
-               await deleteExpense(userId, appState.editingExpense.id, true);
-           }
-           
-           addDebugLog('支出データを保存します', {
-               userId,
-               date,
-               description,
-               amount,
-               year: appState.currentYear,
-               month: appState.currentMonth
-           });
-           
-           // GASに新しい支出を追加
-           const result = await callAPI('saveExpense', {
-               data: JSON.stringify({
-                   userId: userId,
-                   date: date,
-                   description: description,
-                   amount: amount,
-                   year: appState.currentYear,
-                   month: appState.currentMonth
-               })
-           });
-           
-           if (result && result.success) {
-               addDebugLog('支出データの保存に成功しました', result);
-               
-               // 成功したら、データを再読み込み
-               await loadData();
-               
-               // フォームをリセット
-               elements.expenseForm.reset();
-               
-               // 編集モードをリセット
-               if (appState.editingExpense) {
-                   appState.editingExpense = null;
-                   elements.formTitle.textContent = '新規支出の追加';
-                   elements.submitButton.textContent = '追加';
-                   elements.cancelButton.classList.add('hidden');
-               }
-           } else {
-               addDebugLog('支出データの保存に失敗しました', result);
-               alert('支出の保存に失敗しました。後でもう一度お試しください。');
-           }
-       }
+            e.preventDefault();
+            
+            // ボタンを無効化して視覚的フィードバックを提供
+            elements.submitButton.disabled = true;
+            elements.submitButton.textContent = '保存中...';
+            
+            try {
+                // 入力値の取得
+                const userId = elements.userSelect.value;
+                const date = elements.dateInput.value.trim();
+                const description = elements.descriptionInput.value.trim();
+                const amountStr = elements.amountInput.value.trim();
+                
+                // バリデーション
+                if (!date || !description || !amountStr) {
+                    alert('すべての項目を入力してください');
+                    return;
+                }
+                
+                const amount = parseFloat(amountStr.replace(/,/g, ''));
+                
+                if (isNaN(amount)) {
+                    alert('金額は数値で入力してください');
+                    return;
+                }
+                
+                // 新しい支出オブジェクトの作成
+                const newExpense = {
+                    userId: userId,
+                    date: date,
+                    description: description,
+                    amount: amount,
+                    year: appState.currentYear,
+                    month: appState.currentMonth
+                };
+                
+                // 一時的なIDの生成
+                const tempId = 'temp_' + Date.now();
+                
+                // 編集モードの場合
+                if (appState.editingExpense) {
+                    // ローカルの状態から古いデータを削除
+                    const index = appState.expenses[userId].findIndex(item => item.id === appState.editingExpense.id);
+                    if (index !== -1) {
+                        appState.expenses[userId].splice(index, 1);
+                    }
+                    
+                    // サーバーでの削除処理は非同期で行う（結果を待たない）
+                    deleteExpense(userId, appState.editingExpense.id, true);
+                }
+                
+                // 一時的にローカルの状態に追加（即時反映）
+                appState.expenses[userId].push({
+                    id: tempId,
+                    ...newExpense
+                });
+                
+                // UIをすぐに更新
+                updateSingleUserExpenses(userId);
+                updateTotals();
+                
+                addDebugLog('支出データを保存します', newExpense);
+                
+                // サーバーに保存（バックグラウンドで）
+                const result = await callAPI('saveExpense', {
+                    data: JSON.stringify(newExpense)
+                });
+                
+                if (result && result.success) {
+                    addDebugLog('支出データの保存に成功しました', result);
+                    
+                    // 一時IDを実際のIDに置き換え
+                    const realId = result.id;
+                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
+                    if (index !== -1) {
+                        appState.expenses[userId][index].id = realId;
+                    }
+                    
+                    // フォームをリセット
+                    elements.expenseForm.reset();
+                    
+                    // 定期支出の状態を更新
+                    updateRegularExpenses();
+                    
+                    // 編集モードをリセット
+                    if (appState.editingExpense) {
+                        appState.editingExpense = null;
+                        elements.formTitle.textContent = '新規支出の追加';
+                        elements.cancelButton.classList.add('hidden');
+                    }
+                } else {
+                    addDebugLog('支出データの保存に失敗しました', result);
+                    
+                    // エラー時は一時データを削除
+                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
+                    if (index !== -1) {
+                        appState.expenses[userId].splice(index, 1);
+                        updateSingleUserExpenses(userId);
+                        updateTotals();
+                    }
+                    
+                    alert('支出の保存に失敗しました。後でもう一度お試しください。');
+                }
+            } catch (error) {
+                addDebugLog('支出追加処理エラー:', error);
+                alert(`エラーが発生しました: ${error.message}`);
+            } finally {
+                // 必ずボタンを元に戻す
+                elements.submitButton.disabled = false;
+                elements.submitButton.textContent = '追加';
+            }
+        }
 
        // 支出の編集
        function editExpense(userId, expenseId) {
