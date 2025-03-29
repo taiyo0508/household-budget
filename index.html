@@ -622,6 +622,75 @@
             }
         }
 
+        // 特定ユーザーの支出テーブルだけを更新する関数
+        function updateSingleUserExpenses(userId) {
+            const tableBody = document.getElementById(`${userId}-expenses`);
+            const expenses = appState.expenses[userId] || [];
+            
+            // テーブルをクリア
+            tableBody.innerHTML = '';
+            
+            if (expenses.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="4" class="border p-2 text-center text-gray-500">
+                        データがありません
+                    </td>
+                `;
+                tableBody.appendChild(emptyRow);
+                return;
+            }
+            
+            // DOM操作を最小限にするためのフラグメント
+            const fragment = document.createDocumentFragment();
+            
+            // 支出データを表示
+            expenses.forEach(expense => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                const amountClass = expense.amount < 0 ? 'negative-amount' : '';
+                
+                row.innerHTML = `
+                    <td class="border p-2">${expense.date}</td>
+                    <td class="border p-2">${expense.description}</td>
+                    <td class="border p-2 text-right ${amountClass}">${parseFloat(expense.amount).toLocaleString()}</td>
+                    <td class="border p-2 text-center">
+                        <button
+                            data-id="${expense.id}"
+                            data-action="edit"
+                            class="px-2 py-1 bg-blue-500 text-white rounded text-sm mr-1 hover:bg-blue-600"
+                        >
+                            編集
+                        </button>
+                        <button
+                            data-id="${expense.id}"
+                            data-action="delete"
+                            class="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                        >
+                            削除
+                        </button>
+                    </td>
+                `;
+                
+                // イベントリスナーを追加
+                const editBtn = row.querySelector('[data-action="edit"]');
+                editBtn.addEventListener('click', function() {
+                    editExpense(userId, expense.id);
+                });
+                
+                const deleteBtn = row.querySelector('[data-action="delete"]');
+                deleteBtn.addEventListener('click', function() {
+                    deleteExpense(userId, expense.id);
+                });
+                
+                fragment.appendChild(row);
+            });
+            
+            // フラグメントを一度にDOMに追加
+            tableBody.appendChild(fragment);
+        }
+
         async function addExpense(e) {
             e.preventDefault();
             
