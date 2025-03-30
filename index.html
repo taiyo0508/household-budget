@@ -284,7 +284,7 @@
 
     <script>
         // APIのURL (GASのウェブアプリURL) - デプロイ後に更新してください
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzmyTIzzG_vehCO1jTgLLKDC9SNNj17mV0ZP3jB3VOe4VwCztDE5I33lQjH86WT2r4c/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwD0j77MshaxRZOTQEsz1Y93tRDUVWi4fMecDzzfRwZMzT2qyW7d5fK96V7ObiRrXiU/exec';
         
         // アプリケーションの状態
         const appState = {
@@ -1193,6 +1193,9 @@
             
             appState.currentMonth = newMonth;
             appState.currentYear = newYear;
+
+            // このコードを追加
+            addDebugLog(`月の変更: ${appState.currentYear}年${appState.currentMonth}月に切り替え`);
             
             // 即時に月表示だけ更新してユーザー体験を向上
             elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
