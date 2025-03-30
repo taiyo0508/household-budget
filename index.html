@@ -284,7 +284,7 @@
 
     <script>
         // APIのURL (GASのウェブアプリURL) - デプロイ後に更新してください
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz-2F1s03Fb5-L_PFz2BFIkQs4TfPON0RHsNXqJ2kgRNaFM_QX4Zy8FWRFx5oW1Qf2W/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycby1SlxX_mutiNGy1rmWl7H3BPlEAj6ZdiBOGC_huNT8aqo7jV9jO6konK7OiIxE3yi4/exec';
         
         // アプリケーションの状態
         const appState = {
@@ -575,8 +575,7 @@
 
         // ユーティリティ関数 - 表示用にフォーマットされた数値を返す
         function formatCurrency(amount) {
-            // 数値を3桁区切りでフォーマット（円記号なし）
-            return amount.toLocaleString();
+            return amount.toLocaleString() + '円';
         }
 
         // ユーティリティ関数 - 日付を yyyy年m月 形式で表示
