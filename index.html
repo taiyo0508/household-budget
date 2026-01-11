@@ -457,6 +457,9 @@
                 // バッチ処理でデータを一度に取得
                 // バッチ処理でデータを一度に取得する際のパラメータを強化
                 const batchResult = await callAPI('getBatchData', {
+
+                                    // まずローカルストレージから読み込み（オフライン対応）
+                                    loadFromLocalStorage();
                     year: appState.currentYear,
                     month: appState.currentMonth,
                     includeSettings: true,  // 設定情報も含める
@@ -503,7 +506,9 @@
                 } else {
                     addDebugLog('バッチデータ取得失敗', batchResult);
                 }
-                
+
+                                // ローカルストレージに保存
+                                saveToLocalStorage();
                 // UI更新を最適化（requestAnimationFrameを使用）
                 window.requestAnimationFrame(() => {
                     updateUI();
@@ -582,6 +587,54 @@
         function formatYearMonth(year, month) {
             return `${year}年${month}月`;
         }
+
+                // ローカルストレージにデータを保存
+                function saveToLocalStorage() {
+                                try {
+                                                    const dataToSave = {
+                                                                            carryOver: appState.carryOver,
+                                                                            expenses: appState.expenses,
+                                                                            refundAmounts: appState.refundAmounts,
+                                                                            regularExpenses: appState.regularExpenses,
+                                                                            currentYear: appState.currentYear,
+                                                                            currentMonth: appState.currentMonth,
+                                                                            lastSaved: new Date().toISOString()
+                                                    };
+                                                    localStorage.setItem('householdBudgetData', JSON.stringify(dataToSave));
+                                                    addDebugLog('ローカルストレージに保存しました');
+                                                    return true;
+                                } catch (error) {
+                                                    addDebugLog('ローカルストレージ保存エラー:', error);
+                                                    return false;
+                                }
+                }
+
+                // ローカルストレージからデータを読み込み
+                function loadFromLocalStorage() {
+                                try {
+                                                    const savedData = localStorage.getItem('householdBudgetData');
+                                                    if (savedData) {
+                                                                            const data = JSON.parse(savedData);
+                                                                            appState.carryOver = data.carryOver || { user1: 0, user2: 0 };
+                                                                            appState.expenses = data.expenses || { user1: [], user2: [] };
+                                                                            appState.refundAmounts = data.refundAmounts || { user1: 0, user2: 0 };
+                                                                            if (data.regularExpenses) {
+                                                                                                        appState.regularExpenses = data.regularExpenses;
+                                                                                }
+                                                                            if (data.currentYear && data.currentMonth) {
+                                                                                                        appState.currentYear = data.currentYear;
+                                                                                                        appState.currentMonth = data.currentMonth;
+                                                                                }
+                                                                            addDebugLog('ローカルストレージから復元しました', data);
+                                                                            return true;
+                                                    }
+                                                    return false;
+                                } catch (error) {
+                                                    addDebugLog('ローカルストレージ読み込みエラー:', error);
+                                                    return false;
+                                }
+                }
+        
 
         // ユーティリティ関数 - 指定月の最終日を取得
         function getLastDayOfMonth(year, month) {
@@ -898,6 +951,8 @@
                
                // 初期表示 - appStateの保存された値を使用
                const refundAmount = appState.refundAmounts[userId] || 0;
+                               // ローカルストレージに保存
+                               saveToLocalStorage();
                newRefundInput.value = refundAmount;
                nextCarryover.textContent = formatCurrency(total - refundAmount);
            }
@@ -985,7 +1040,10 @@
                     
                     // 一時IDを実際のIDに置き換え
                     const realId = result.id;
-                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
+                    const index = appState.expenses[userId].findIndex
+                        
+                                        // ローカルストレージに保存
+                                    saveToLocalStorage();(item => item.id === tempId);
                     if (index !== -1) {
                         appState.expenses[userId][index].id = realId;
                     }
@@ -1173,7 +1231,9 @@
                alert('精算が完了しました。翌月へ持ち越しました。');
            } catch (error) {
                addDebugLog('精算処理エラー:', error);
-               alert(`精算処理中にエラーが発生しました: ${error.message}`);
+               alert(`精算処理中にエラーが発生しました: ${error.message}`)
+                               // ローカルストレージに保存
+                           saveToLocalStorage();;
            }
        }
 
@@ -1273,6 +1333,14 @@
            
            // イベントリスナーを設定
            setupEventListeners();
+
+
+                   // ローカルストレージから復元を試みる
+                   const hasLocalData = loadFromLocalStorage();
+                   if (hasLocalData) {
+                                   addDebugLog('ローカルストレージからデータを復元しました');
+                                   updateUI();  // 先にローカルデータで画面表示
+                   }
            
            // 初期データ読み込み
            addDebugLog('アプリを初期化しています');
