@@ -456,10 +456,13 @@
                 
                 // バッチ処理でデータを一度に取得
                 // バッチ処理でデータを一度に取得する際のパラメータを強化
+        // まずローカルストレージから読み込み（オフライン対応）
+                        loadFromLocalStorage();
+
+                        // バッチ処理でデータを一度に取得
+                
                 const batchResult = await callAPI('getBatchData', {
 
-                                    // まずローカルストレージから読み込み（オフライン対応）
-                                    loadFromLocalStorage();
                     year: appState.currentYear,
                     month: appState.currentMonth,
                     includeSettings: true,  // 設定情報も含める
