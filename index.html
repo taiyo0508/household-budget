@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家計簿アプリ - 定期支出判定版</title>
+    <title>家計簿アプリ - 完結版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .negative-amount { color: #ef4444; }
@@ -55,7 +55,7 @@
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-yellow-400">
                 <h3 class="text-xl font-bold mb-4 text-yellow-600">太陽</h3>
                 <div class="mb-4 p-3 bg-gray-50 rounded text-sm grid grid-cols-1 gap-1">
-                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user1-carryover" class="font-bold">0円</span></p>
+                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user1-carryover" class="font-bold text-gray-700">0円</span></p>
                     <p class="flex justify-between text-blue-600 font-medium"><span>当月支出合計:</span> <span id="user1-current">0円</span></p>
                     <p class="flex justify-between border-t pt-1 text-lg font-bold text-gray-800"><span>総合計:</span> <span id="user1-total">0円</span></p>
                 </div>
@@ -74,7 +74,7 @@
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-400">
                 <h3 class="text-xl font-bold mb-4 text-blue-600">愛華音</h3>
                 <div class="mb-4 p-3 bg-gray-50 rounded text-sm grid grid-cols-1 gap-1">
-                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user2-carryover" class="font-bold">0円</span></p>
+                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user2-carryover" class="font-bold text-gray-700">0円</span></p>
                     <p class="flex justify-between text-blue-600 font-medium"><span>当月支出合計:</span> <span id="user2-current">0円</span></p>
                     <p class="flex justify-between border-t pt-1 text-lg font-bold text-gray-800"><span>総合計:</span> <span id="user2-total">0円</span></p>
                 </div>
@@ -97,24 +97,44 @@
                 <div class="p-5 rounded-xl border-2 border-yellow-300 bg-yellow-50 shadow-inner">
                     <h4 class="font-bold text-lg mb-3 text-yellow-800">太陽 の精算</h4>
                     <div class="space-y-3">
-                        <div class="flex justify-between items-center text-gray-600"><span>総合計:</span><span id="user1-settlement-total" class="font-bold">0円</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-700">返金額:</span><input id="user1-refund" type="number" class="w-32 p-2 border rounded text-right font-bold" /></div>
-                        <div class="flex justify-between items-center pt-3 border-t"><span>翌月持越:</span><span id="user1-next-carryover" class="font-black text-xl text-yellow-900">0円</span></div>
+                        <div class="flex justify-between items-center text-gray-600"><span>現在の合計:</span><span id="user1-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">返金額:</span>
+                            <input id="user1-refund" type="number" class="w-32 p-2 border-2 border-yellow-400 rounded text-right font-bold focus:bg-white" />
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-yellow-200">
+                            <span class="text-gray-700">翌月持越:</span>
+                            <span id="user1-next-carryover" class="font-black text-xl text-yellow-900 underline">0円</span>
+                        </div>
                     </div>
                 </div>
                 <div class="p-5 rounded-xl border-2 border-blue-300 bg-blue-50 shadow-inner">
                     <h4 class="font-bold text-lg mb-3 text-blue-800">愛華音 の精算</h4>
                     <div class="space-y-3">
-                        <div class="flex justify-between items-center text-gray-600"><span>総合計:</span><span id="user2-settlement-total" class="font-bold">0円</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-700">返金額:</span><input id="user2-refund" type="number" class="w-32 p-2 border rounded text-right font-bold" /></div>
-                        <div class="flex justify-between items-center pt-3 border-t"><span>翌月持越:</span><span id="user2-next-carryover" class="font-black text-xl text-blue-900">0円</span></div>
+                        <div class="flex justify-between items-center text-gray-600"><span>現在の合計:</span><span id="user2-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">返金額:</span>
+                            <input id="user2-refund" type="number" class="w-32 p-2 border-2 border-blue-400 rounded text-right font-bold focus:bg-white" />
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-blue-200">
+                            <span class="text-gray-700">翌月持越:</span>
+                            <span id="user2-next-carryover" class="font-black text-xl text-blue-900 underline">0円</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="flex justify-center"><button id="settlementButton" class="px-10 py-4 bg-purple-600 text-white rounded-full font-black text-xl shadow-lg hover:bg-purple-700 hover:scale-105 transform transition duration-200">月末清算を確定して翌月へ</button></div>
+            <div class="flex justify-center">
+                <button id="settlementButton" class="px-10 py-4 bg-purple-600 text-white rounded-full font-black text-xl shadow-lg hover:bg-purple-700 hover:scale-105 transform transition duration-200">
+                    月末清算を確定して翌月へ
+                </button>
+            </div>
+            <p id="settlementDate" class="text-center text-[10px] text-gray-400 mt-4 italic"></p>
         </div>
 
-        <div class="mt-6 flex justify-between items-center text-[10px] text-gray-400 px-2 italic"><span id="syncStatus">同期中...</span><button id="syncButton" class="underline">強制更新</button></div>
+        <div class="mt-6 flex justify-between items-center text-[10px] text-gray-400 px-2 italic">
+            <span id="syncStatus">同期中...</span>
+            <button id="syncButton" class="underline hover:text-blue-500">強制更新</button>
+        </div>
     </div>
 
     <script>
@@ -126,16 +146,10 @@
             carryOver: { user1: 0, user2: 0 },
             expenses: { user1: [], user2: [] },
             refundAmounts: { user1: 0, user2: 0 },
-            // 定期支出の設定（ここで判定用のキーワードを指定）
+            settlementDate: null,
             regularConfig: {
-                user1: [
-                    { label: '電気代', keyword: '電気' },
-                    { label: '水道代', keyword: '水道' },
-                    { label: 'ガス代', keyword: 'ガス' }
-                ],
-                user2: [
-                    { label: 'ガソリン代', keyword: 'ガソリン' }
-                ]
+                user1: [{ label: '電気代', keyword: '電気' }, { label: '水道代', keyword: '水道' }, { label: 'ガス代', keyword: 'ガス' }],
+                user2: [{ label: 'ガソリン代', keyword: 'ガソリン' }]
             }
         };
 
@@ -143,7 +157,8 @@
             currentMonthDisplay: document.getElementById('currentMonthDisplay'),
             expenseForm: document.getElementById('expenseForm'),
             submitButton: document.getElementById('submitButton'),
-            syncStatus: document.getElementById('syncStatus')
+            syncStatus: document.getElementById('syncStatus'),
+            settlementDateDisplay: document.getElementById('settlementDate')
         };
 
         function formatCurrency(v) { return Math.floor(v).toLocaleString() + '円'; }
@@ -163,6 +178,7 @@
             });
         }
 
+        // 月とユーザーごとにユニークな保存キーを作成
         function getStorageKey(u) { return `temp_refund_${appState.currentYear}_${appState.currentMonth}_${u}`; }
 
         async function loadData() {
@@ -172,15 +188,21 @@
                 if (res.success) {
                     appState.expenses.user1 = res.expenses.user1 || [];
                     appState.expenses.user2 = res.expenses.user2 || [];
+                    
+                    // スプレッドシートから取得した値を反映
                     appState.carryOver.user1 = parseFloat(res.carryOver.user1) || 0;
                     appState.carryOver.user2 = parseFloat(res.carryOver.user2) || 0;
                     appState.refundAmounts.user1 = parseFloat(res.refundAmounts.user1) || 0;
                     appState.refundAmounts.user2 = parseFloat(res.refundAmounts.user2) || 0;
-                    
-                    const temp1 = localStorage.getItem(getStorageKey('user1'));
-                    const temp2 = localStorage.getItem(getStorageKey('user2'));
-                    if (temp1 !== null) appState.refundAmounts.user1 = parseFloat(temp1);
-                    if (temp2 !== null) appState.refundAmounts.user2 = parseFloat(temp2);
+                    appState.settlementDate = res.settlementDate;
+
+                    // ローカルの「下書き」がある場合はそれを優先（精算前のみ有効）
+                    const t1 = localStorage.getItem(getStorageKey('user1'));
+                    const t2 = localStorage.getItem(getStorageKey('user2'));
+                    if (!appState.settlementDate) {
+                        if (t1 !== null) appState.refundAmounts.user1 = parseFloat(t1);
+                        if (t2 !== null) appState.refundAmounts.user2 = parseFloat(t2);
+                    }
 
                     updateUI();
                     elements.syncStatus.textContent = `同期済み: ${new Date().toLocaleTimeString()}`;
@@ -190,9 +212,11 @@
 
         function updateUI() {
             elements.currentMonthDisplay.textContent = `${appState.currentYear}年${appState.currentMonth}月`;
+            elements.settlementDateDisplay.textContent = appState.settlementDate ? `この月は精算済みです (${appState.settlementDate})` : "";
+            
             ['user1', 'user2'].forEach(u => {
                 renderExpenses(u);
-                renderRegularCheck(u); // 定期支出チェックを描画
+                renderRegularCheck(u);
             });
             updateTotals();
         }
@@ -202,36 +226,28 @@
             container.innerHTML = '';
             const items = appState.expenses[userId];
             if (items.length === 0) {
-                container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400 italic">入力なし</td></tr>';
+                container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400 italic font-bold uppercase tracking-widest text-[10px]">No Data</td></tr>';
                 return;
             }
-            items.forEach(ex => {
+            items.sort((a, b) => a.date - b.date).forEach(ex => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b hover:bg-gray-50';
-                tr.innerHTML = `<td class="p-2">${ex.date}日</td><td class="p-2">${ex.description}</td><td class="p-2 text-right font-mono">${parseFloat(ex.amount).toLocaleString()}</td><td class="p-2 text-center"><button onclick="deleteExpense('${userId}', '${ex.id}')" class="text-red-400">✕</button></td>`;
+                tr.innerHTML = `<td class="p-2 font-bold text-gray-400 text-xs">${ex.date}日</td><td class="p-2 text-gray-700 font-medium">${ex.description}</td><td class="p-2 text-right font-mono font-bold">${parseFloat(ex.amount).toLocaleString()}</td><td class="p-2 text-center"><button onclick="deleteExpense('${userId}', '${ex.id}')" class="text-red-300 hover:text-red-500">✕</button></td>`;
                 container.appendChild(tr);
             });
         }
 
-        // ★ 定期支出のチェック判定ロジック ★
         function renderRegularCheck(userId) {
             const listContainer = document.getElementById(`${userId}-regular-list`);
             listContainer.innerHTML = '';
-            
             const config = appState.regularConfig[userId];
             const expenses = appState.expenses[userId];
 
             config.forEach(item => {
-                // ここが判定のキモ：「電気代」というラベルに対し、支出内容に「電気」が含まれているか
                 const isPaid = expenses.some(ex => ex.description && ex.description.includes(item.keyword));
-                
                 const badge = document.createElement('span');
-                badge.className = `px-2 py-1 rounded text-[10px] font-bold border transition-all ${
-                    isPaid 
-                    ? 'bg-green-100 text-green-700 border-green-300' 
-                    : 'bg-red-50 text-red-400 border-red-200 opacity-60'
-                }`;
-                badge.innerHTML = `${isPaid ? '✅' : '⭕'} ${item.label}`;
+                badge.className = `px-2 py-1 rounded text-[10px] font-bold border transition-all ${isPaid ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-50 text-red-300 border-red-200 opacity-60'}`;
+                badge.innerHTML = `${isPaid ? '✓' : '○'} ${item.label}`;
                 listContainer.appendChild(badge);
             });
         }
@@ -249,24 +265,45 @@
                 document.getElementById(`${u}-settlement-total`).textContent = formatCurrency(total);
                 
                 const refundInput = document.getElementById(`${u}-refund`);
-                refundInput.value = refund || '';
+                // 数値を文字列としてセット（0の場合も表示されるように）
+                refundInput.value = refund; 
                 document.getElementById(`${u}-next-carryover`).textContent = formatCurrency(total - refund);
             });
         }
 
-        function handleRefundInput(u, val) {
+        // デバウンス (入力が止まってから保存)
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        const autoSaveRefund = debounce(async (u, val) => {
             const amount = parseFloat(val) || 0;
             appState.refundAmounts[u] = amount;
             localStorage.setItem(getStorageKey(u), amount);
             updateTotals();
-        }
+            
+            // スプレッドシートにも一時保存を送る
+            try {
+                await callAPI('saveCarryOver', {
+                    data: JSON.stringify({
+                        userId: u, year: appState.currentYear, month: appState.currentMonth,
+                        amount: appState.carryOver[u], refund: amount
+                    })
+                });
+            } catch (e) { console.warn("Background save failed"); }
+        }, 800);
 
-        document.getElementById('user1-refund').oninput = (e) => handleRefundInput('user1', e.target.value);
-        document.getElementById('user2-refund').oninput = (e) => handleRefundInput('user2', e.target.value);
+        document.getElementById('user1-refund').oninput = (e) => autoSaveRefund('user1', e.target.value);
+        document.getElementById('user2-refund').oninput = (e) => autoSaveRefund('user2', e.target.value);
 
         document.getElementById('settlementButton').onclick = async () => {
             if (!confirm('精算を確定し、翌月へ移動しますか？')) return;
             try {
+                elements.syncStatus.textContent = '精算中...';
                 for (const u of ['user1', 'user2']) {
                     const total = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount || 0), 0) + appState.carryOver[u];
                     const refund = appState.refundAmounts[u];
@@ -274,16 +311,14 @@
                         data: JSON.stringify({
                             userId: u, year: appState.currentYear, month: appState.currentMonth,
                             currentTotal: total, refund: refund, nextCarryOver: total - refund,
-                            settlementDate: new Date().toLocaleString('ja-JP')
+                            settlementDate: new Date().toLocaleString('ja-JP', { dateStyle: 'medium', timeStyle: 'short' })
                         })
                     });
                     localStorage.removeItem(getStorageKey(u));
                 }
-                alert('精算完了！');
-                appState.currentMonth++;
-                if (appState.currentMonth > 12) { appState.currentMonth = 1; appState.currentYear++; }
-                loadData();
-            } catch (e) { alert('精算エラー'); }
+                alert('精算が完了しました！翌月のデータを確認します。');
+                changeMonth(1); // 翌月へ移動
+            } catch (e) { alert('精算エラー: ' + e.message); }
         };
 
         elements.expenseForm.onsubmit = async (e) => {
