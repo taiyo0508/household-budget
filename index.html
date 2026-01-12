@@ -3,88 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家計簿アプリ - 完結版修正</title>
+    <title>家計簿アプリ - 安定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .negative-amount { color: #ef4444; }
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-10">
+<body class="bg-gray-100 min-h-screen pb-10 font-sans text-gray-800">
     <div id="app" class="max-w-6xl mx-auto p-4">
-        <h1 class="text-3xl font-bold text-center my-4 text-gray-800">家計簿アプリ</h1>
+        <h1 class="text-3xl font-bold text-center my-6">家計簿アプリ</h1>
         
-        <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between items-center border-b-4 border-blue-500">
-            <button id="prevMonth" class="px-6 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors">前月</button>
-            <h2 id="currentMonthDisplay" class="text-2xl font-bold text-gray-700">2026年1月</h2>
-            <button id="nextMonth" class="px-6 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors">次月</button>
+        <div class="bg-white p-4 rounded-xl shadow mb-6 flex justify-between items-center border-b-4 border-blue-500">
+            <button id="prevMonth" class="px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors">前月</button>
+            <h2 id="currentMonthDisplay" class="text-2xl font-bold">2026年1月</h2>
+            <button id="nextMonth" class="px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors">次月</button>
         </div>
         
-        <div class="bg-white p-6 rounded-lg shadow mb-6 border-l-8 border-green-500">
+        <div class="bg-white p-6 rounded-xl shadow mb-6 border-l-8 border-green-500">
             <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <select id="userSelect" class="p-2 border rounded font-bold"><option value="user1">太陽</option><option value="user2">愛華音</option></select>
-                <input id="dateInput" type="number" placeholder="日" class="p-2 border rounded" />
-                <input id="descriptionInput" type="text" placeholder="内容" class="p-2 border rounded" />
+                <select id="userSelect" class="p-3 border rounded-lg font-bold"><option value="user1">太陽</option><option value="user2">愛華音</option></select>
+                <input id="dateInput" type="number" placeholder="日" class="p-3 border rounded-lg" />
+                <input id="descriptionInput" type="text" placeholder="内容（例：電気）" class="p-3 border rounded-lg" />
                 <div class="flex gap-2">
-                    <input id="amountInput" type="number" placeholder="金額" class="p-2 border rounded flex-1" />
-                    <button id="submitButton" type="submit" class="px-4 py-2 bg-green-500 text-white font-bold rounded">追加</button>
+                    <input id="amountInput" type="number" placeholder="金額" class="p-3 border rounded-lg flex-1 font-mono" />
+                    <button id="submitButton" type="submit" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-transform active:scale-95">追加</button>
                 </div>
             </form>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-yellow-400">
-                <h3 class="text-xl font-bold mb-4 text-yellow-600">太陽</h3>
-                <div class="mb-4 p-3 bg-gray-50 rounded text-sm space-y-1">
+            <div class="bg-white p-6 rounded-xl shadow border-t-4 border-yellow-400">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-yellow-600">太陽</h3>
+                    <div id="user1-regular-list" class="flex flex-wrap gap-1"></div>
+                </div>
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg text-sm space-y-1">
                     <p class="flex justify-between"><span>前月持越し:</span> <span id="user1-carryover" class="font-bold">0円</span></p>
                     <p class="flex justify-between text-blue-600"><span>当月合計:</span> <span id="user1-current">0円</span></p>
                     <p class="flex justify-between border-t pt-1 font-bold text-lg"><span>総合計:</span> <span id="user1-total">0円</span></p>
                 </div>
-                <div class="mt-4"><div id="user1-regular-list" class="flex flex-wrap gap-2 mb-4"></div></div>
                 <table class="w-full text-sm"><tbody id="user1-expenses"></tbody></table>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-400">
-                <h3 class="text-xl font-bold mb-4 text-blue-600">愛華音</h3>
-                <div class="mb-4 p-3 bg-gray-50 rounded text-sm space-y-1">
+            <div class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-400">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-blue-600">愛華音</h3>
+                    <div id="user2-regular-list" class="flex flex-wrap gap-1"></div>
+                </div>
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg text-sm space-y-1">
                     <p class="flex justify-between"><span>前月持越し:</span> <span id="user2-carryover" class="font-bold">0円</span></p>
                     <p class="flex justify-between text-blue-600"><span>当月合計:</span> <span id="user2-current">0円</span></p>
                     <p class="flex justify-between border-t pt-1 font-bold text-lg"><span>総合計:</span> <span id="user2-total">0円</span></p>
                 </div>
-                <div class="mt-4"><div id="user2-regular-list" class="flex flex-wrap gap-2 mb-4"></div></div>
                 <table class="w-full text-sm"><tbody id="user2-expenses"></tbody></table>
             </div>
         </div>
 
-        <div class="mt-8 bg-white p-6 rounded-lg shadow border-2 border-purple-200">
-            <h3 class="text-2xl font-bold mb-4 text-purple-700">月末清算</h3>
+        <div class="mt-8 bg-white p-6 rounded-xl shadow border-2 border-purple-300">
+            <h3 class="text-2xl font-bold mb-6 text-purple-700 flex items-center gap-2">💳 月末清算</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div class="p-5 rounded-xl border-2 border-yellow-300 bg-yellow-50">
+                <div class="p-5 rounded-2xl border-2 border-yellow-300 bg-yellow-50">
                     <h4 class="font-bold mb-3">太陽 の精算</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between"><span>総合計:</span><span id="user1-settlement-total" class="font-bold">0円</span></div>
-                        <div class="flex justify-between items-center text-red-600"><span>返金額:</span><input id="user1-refund" type="number" class="w-32 p-2 border-2 border-yellow-400 rounded text-right font-bold" /></div>
-                        <div class="flex justify-between pt-2 border-t font-black text-lg"><span>翌月持越:</span><span id="user1-next-carryover">0円</span></div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between"><span>現在の合計:</span><span id="user1-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-red-600 font-bold italic text-sm">返金額（自動保存）:</span>
+                            <input id="user1-refund" type="number" class="w-32 p-2 border-2 border-yellow-400 rounded-lg text-right font-bold focus:bg-white" />
+                        </div>
+                        <div class="flex justify-between pt-3 border-t-2 border-yellow-200">
+                            <span class="font-bold">翌月持越額:</span>
+                            <span id="user1-next-carryover" class="font-black text-2xl text-yellow-900">0円</span>
+                        </div>
                     </div>
                 </div>
-                <div class="p-5 rounded-xl border-2 border-blue-300 bg-blue-50">
+                <div class="p-5 rounded-2xl border-2 border-blue-300 bg-blue-50">
                     <h4 class="font-bold mb-3">愛華音 の精算</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between"><span>総合計:</span><span id="user2-settlement-total" class="font-bold">0円</span></div>
-                        <div class="flex justify-between items-center text-red-600"><span>返金額:</span><input id="user2-refund" type="number" class="w-32 p-2 border-2 border-blue-400 rounded text-right font-bold" /></div>
-                        <div class="flex justify-between pt-2 border-t font-black text-lg"><span>翌月持越:</span><span id="user2-next-carryover">0円</span></div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between"><span>現在の合計:</span><span id="user2-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-red-600 font-bold italic text-sm">返金額（自動保存）:</span>
+                            <input id="user2-refund" type="number" class="w-32 p-2 border-2 border-blue-400 rounded-lg text-right font-bold focus:bg-white" />
+                        </div>
+                        <div class="flex justify-between pt-3 border-t-2 border-blue-200">
+                            <span class="font-bold">翌月持越額:</span>
+                            <span id="user2-next-carryover" class="font-black text-2xl text-blue-900">0円</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="flex flex-col items-center">
-                <button id="settlementButton" class="px-10 py-4 bg-purple-600 text-white rounded-full font-black text-xl shadow-lg hover:bg-purple-700">精算を確定して翌月へ</button>
-                <p id="settlementStatus" class="text-xs text-gray-400 mt-4"></p>
+            <div class="flex flex-col items-center gap-4">
+                <button id="settlementButton" class="px-12 py-4 bg-purple-600 text-white rounded-full font-black text-xl shadow-lg hover:bg-purple-700 transition-transform active:scale-95">精算を確定して翌月へ</button>
+                <p id="settlementStatus" class="text-sm font-bold text-gray-400"></p>
             </div>
         </div>
-        <div class="mt-4 text-center"><button id="syncButton" class="text-[10px] text-gray-400 underline">データを強制更新</button></div>
+        <div class="mt-8 text-center"><button id="syncButton" class="text-xs text-gray-400 underline decoration-dotted">データを強制更新</button></div>
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwadUXiQapqTXb6-Pudc8Oe50OrezBeIL4UCEt6Fw8lhNVRirZQbZS3rXiGq15nI8Se/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxFNV9BqhS8W3HRoXrfdGVG_kAHnChbgd_Ft9tBUpxNh_xVTwGCkHDLKtrNC_BESEbn/exec';
+        
         const appState = {
             currentYear: new Date().getFullYear(),
             currentMonth: new Date().getMonth() + 1,
@@ -93,8 +110,8 @@
             refundAmounts: { user1: 0, user2: 0 },
             settlementDate: null,
             regularConfig: {
-                user1: [{ label: '電気代', keyword: '電気' }, { label: '水道代', keyword: '水道' }, { label: 'ガス代', keyword: 'ガス' }],
-                user2: [{ label: 'ガソリン代', keyword: 'ガソリン' }]
+                user1: [{ label: '電気', keyword: '電気' }, { label: '水道', keyword: '水道' }, { label: 'ガス', keyword: 'ガス' }],
+                user2: [{ label: 'ガソリン', keyword: 'ガソリン' }]
             }
         };
 
@@ -109,7 +126,7 @@
         }
 
         async function loadData() {
-            document.getElementById('settlementStatus').textContent = "同期中...";
+            document.getElementById('settlementStatus').textContent = "⌛ 同期中...";
             try {
                 const res = await callAPI('getBatchData', { year: appState.currentYear, month: appState.currentMonth });
                 appState.expenses = res.expenses;
@@ -117,32 +134,32 @@
                 appState.refundAmounts = res.refundAmounts;
                 appState.settlementDate = res.settlementDate;
                 updateUI();
-                document.getElementById('settlementStatus').textContent = appState.settlementDate ? `精算済み: ${appState.settlementDate}` : "";
-            } catch (e) { console.error(e); }
+                document.getElementById('settlementStatus').textContent = appState.settlementDate ? `✅ 精算済み: ${appState.settlementDate}` : "";
+            } catch (e) { document.getElementById('settlementStatus').textContent = "❌ 同期失敗"; }
         }
 
         function updateUI() {
             document.getElementById('currentMonthDisplay').textContent = `${appState.currentYear}年${appState.currentMonth}月`;
             ['user1', 'user2'].forEach(u => {
                 const container = document.getElementById(`${u}-expenses`);
-                container.innerHTML = appState.expenses[u].map(ex => `<tr class="border-b"><td class="p-2 text-xs text-gray-400">${ex.date}日</td><td class="p-2">${ex.description}</td><td class="p-2 text-right font-bold">${parseFloat(ex.amount).toLocaleString()}</td><td class="p-2 text-right"><button onclick="deleteExpense('${u}','${ex.id}')" class="text-red-300">✕</button></td></tr>`).join('');
+                container.innerHTML = appState.expenses[u].map(ex => `<tr class="border-b"><td class="p-2 text-xs text-gray-400 font-bold">${ex.date}日</td><td class="p-2 font-medium">${ex.description}</td><td class="p-2 text-right font-bold">${parseFloat(ex.amount).toLocaleString()}</td><td class="p-2 text-right"><button onclick="deleteExpense('${u}','${ex.id}')" class="text-red-300 hover:text-red-500">✕</button></td></tr>`).join('');
                 
                 const list = document.getElementById(`${u}-regular-list`);
                 list.innerHTML = appState.regularConfig[u].map(item => {
-                    const ok = appState.expenses[u].some(ex => ex.description.includes(item.keyword));
-                    return `<span class="px-2 py-1 rounded text-[10px] font-bold border ${ok?'bg-green-100 text-green-700 border-green-300':'bg-red-50 text-red-300 border-red-200'}">${ok?'✓':'○'} ${item.label}</span>`;
+                    const ok = appState.expenses[u].some(ex => ex.description && ex.description.includes(item.keyword));
+                    return `<span class="px-1.5 py-0.5 rounded text-[9px] font-black border ${ok?'bg-green-500 text-white border-green-500':'bg-gray-100 text-gray-300 border-gray-200'}">${item.label}</span>`;
                 }).join('');
 
-                const cur = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount), 0);
+                const cur = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount || 0), 0);
                 const total = cur + appState.carryOver[u];
                 document.getElementById(`${u}-carryover`).textContent = appState.carryOver[u].toLocaleString() + '円';
                 document.getElementById(`${u}-current`).textContent = cur.toLocaleString() + '円';
                 document.getElementById(`${u}-total`).textContent = total.toLocaleString() + '円';
                 document.getElementById(`${u}-settlement-total`).textContent = total.toLocaleString() + '円';
                 
-                // ★ここを修正：値が0でも正しく表示するように
-                document.getElementById(`${u}-refund`).value = appState.refundAmounts[u];
-                document.getElementById(`${u}-next-carryover`).textContent = (total - appState.refundAmounts[u]).toLocaleString() + '円';
+                const ref = appState.refundAmounts[u];
+                document.getElementById(`${u}-refund`).value = (ref === undefined || ref === null) ? 0 : ref;
+                document.getElementById(`${u}-next-carryover`).textContent = (total - ref).toLocaleString() + '円';
             });
         }
 
@@ -161,24 +178,23 @@
         document.getElementById('settlementButton').onclick = async () => {
             if (!confirm('精算を確定しますか？')) return;
             for (const u of ['user1', 'user2']) {
-                const total = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount), 0) + appState.carryOver[u];
-                await callAPI('settlement', { data: JSON.stringify({ userId: u, year: appState.currentYear, month: appState.currentMonth, currentTotal: total, refund: appState.refundAmounts[u], nextCarryOver: total - appState.refundAmounts[u], settlementDate: new Date().toLocaleString('ja-JP') }) });
+                const curTotal = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount || 0), 0) + appState.carryOver[u];
+                await callAPI('settlement', { data: JSON.stringify({ userId: u, year: appState.currentYear, month: appState.currentMonth, currentTotal: curTotal, refund: appState.refundAmounts[u], nextCarryOver: curTotal - appState.refundAmounts[u], settlementDate: new Date().toLocaleString('ja-JP') }) });
             }
-            alert('精算完了');
-            appState.currentMonth++;
-            if (appState.currentMonth > 12) { appState.currentMonth = 1; appState.currentYear++; }
-            loadData();
+            alert('精算が完了しました。翌月へ移動します。');
+            changeMonth(1);
         };
 
         document.getElementById('expenseForm').onsubmit = async (e) => {
             e.preventDefault();
             const d = { userId: document.getElementById('userSelect').value, date: document.getElementById('dateInput').value, description: document.getElementById('descriptionInput').value, amount: parseFloat(document.getElementById('amountInput').value), year: appState.currentYear, month: appState.currentMonth };
+            if (!d.date || !d.description || isNaN(d.amount)) return alert('入力を確認してください');
             await callAPI('saveExpense', { data: JSON.stringify(d) });
-            document.getElementById('expenseForm').reset();
+            elements.expenseForm.reset();
             loadData();
         };
 
-        window.deleteExpense = async (u, id) => { if (confirm('削除？')) { await callAPI('deleteExpense', { id }); loadData(); } };
+        window.deleteExpense = async (u, id) => { if (confirm('削除しますか？')) { await callAPI('deleteExpense', { id }); loadData(); } };
         
         function changeMonth(dir) {
             appState.currentMonth += dir;
