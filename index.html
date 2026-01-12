@@ -3,1356 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家計簿アプリ</title>
-    <!-- Tailwind CSS CDN -->
+    <title>家計簿アプリ - 定期支出判定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .negative-amount { color: #ef4444; }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div id="app" class="max-w-6xl mx-auto p-4">
-        <h1 class="text-3xl font-bold text-center my-4">家計簿アプリ</h1>
+        <h1 class="text-3xl font-bold text-center my-4 text-gray-800">家計簿アプリ</h1>
         
-        <!-- 月選択 -->
-        <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between items-center">
-            <button id="prevMonth" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                前月
-            </button>
-            
-            <h2 id="currentMonthDisplay" class="text-xl font-semibold">
-                2025年1月
-            </h2>
-            
-            <button id="nextMonth" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                次月
-            </button>
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between items-center border-b-4 border-blue-500">
+            <button id="prevMonth" class="px-6 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors">前月</button>
+            <h2 id="currentMonthDisplay" class="text-2xl font-bold text-gray-700">2026年1月</h2>
+            <button id="nextMonth" class="px-6 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors">次月</button>
         </div>
         
-        <!-- 入力フォーム -->
-        <div class="bg-white p-6 rounded-lg shadow mb-6">
-            <h3 id="formTitle" class="text-xl font-semibold mb-4">
-                新規支出の追加
-            </h3>
-            
+        <div class="bg-white p-6 rounded-lg shadow mb-6 border-l-8 border-green-500">
+            <h3 id="formTitle" class="text-xl font-semibold mb-4 text-gray-700">新規支出の追加</h3>
             <form id="expenseForm">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ユーザー</label>
-                        <select id="userSelect" class="w-full p-2 border rounded">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">ユーザー</label>
+                        <select id="userSelect" class="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none">
                             <option value="user1">太陽</option>
                             <option value="user2">愛華音</option>
                         </select>
                     </div>
-                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">日付</label>
-                        <input
-                            id="dateInput"
-                            type="text"
-                            placeholder="例: 15"
-                            class="w-full p-2 border rounded"
-                        />
+                        <label class="block text-sm font-medium text-gray-600 mb-1">日付</label>
+                        <input id="dateInput" type="number" placeholder="例: 15" class="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none" />
                     </div>
-                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">内容</label>
-                        <input
-                            id="descriptionInput"
-                            type="text"
-                            placeholder="例: 食料品"
-                            class="w-full p-2 border rounded"
-                        />
+                        <label class="block text-sm font-medium text-gray-600 mb-1">内容</label>
+                        <input id="descriptionInput" type="text" placeholder="例: 電気" class="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none" />
                     </div>
-                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">金額</label>
-                        <input
-                            id="amountInput"
-                            type="text"
-                            placeholder="例: 1200"
-                            class="w-full p-2 border rounded"
-                        />
+                        <label class="block text-sm font-medium text-gray-600 mb-1">金額</label>
+                        <input id="amountInput" type="number" placeholder="例: 1200" class="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none" />
                     </div>
                 </div>
-                
                 <div class="mt-4 flex justify-end">
-                    <button
-                        id="cancelButton"
-                        type="button"
-                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded mr-2 hover:bg-gray-400 hidden"
-                    >
-                        キャンセル
-                    </button>
-                    
-                    <button
-                        id="submitButton"
-                        type="submit"
-                        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                        追加
-                    </button>
+                    <button id="submitButton" type="submit" class="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 transition-colors">追加</button>
                 </div>
             </form>
         </div>
         
-        <!-- 家計簿テーブル -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 太陽のテーブル -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4 text-yellow-600">
-                    太陽
-                </h3>
-                
-                <div class="mb-4 p-2 bg-gray-100 rounded">
-                    <p><strong>前月持越し:</strong> <span id="user1-carryover">0</span>円</p>
-                    <p><strong>当月合計:</strong> <span id="user1-current">0</span>円</p>
-                    <p><strong>総合計:</strong> <span id="user1-total">0</span>円</p>
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-yellow-400">
+                <h3 class="text-xl font-bold mb-4 text-yellow-600">太陽</h3>
+                <div class="mb-4 p-3 bg-gray-50 rounded text-sm grid grid-cols-1 gap-1">
+                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user1-carryover" class="font-bold">0円</span></p>
+                    <p class="flex justify-between text-blue-600 font-medium"><span>当月支出合計:</span> <span id="user1-current">0円</span></p>
+                    <p class="flex justify-between border-t pt-1 text-lg font-bold text-gray-800"><span>総合計:</span> <span id="user1-total">0円</span></p>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border p-2 text-left">日</th>
-                                <th class="border p-2 text-left">内容</th>
-                                <th class="border p-2 text-right">金額</th>
-                                <th class="border p-2 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user1-expenses">
-                            <!-- ここに太陽の支出データが入ります -->
-                        </tbody>
+                <div class="overflow-x-auto min-h-[150px]">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-100"><tr><th class="p-2 text-left">日</th><th class="p-2 text-left">内容</th><th class="p-2 text-right">金額</th><th class="p-2 text-center">操作</th></tr></thead>
+                        <tbody id="user1-expenses"></tbody>
                     </table>
                 </div>
+                <div class="mt-4 pt-4 border-t border-dashed border-gray-200">
+                    <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">定期支出チェック</h4>
+                    <div id="user1-regular-list" class="flex flex-wrap gap-2"></div>
+                </div>
             </div>
             
-            <!-- 愛華音のテーブル -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4 text-blue-600">
-                    愛華音
-                </h3>
-                
-                <div class="mb-4 p-2 bg-gray-100 rounded">
-                    <p><strong>前月持越し:</strong> <span id="user2-carryover">0</span>円</p>
-                    <p><strong>当月合計:</strong> <span id="user2-current">0</span>円</p>
-                    <p><strong>総合計:</strong> <span id="user2-total">0</span>円</p>
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-400">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">愛華音</h3>
+                <div class="mb-4 p-3 bg-gray-50 rounded text-sm grid grid-cols-1 gap-1">
+                    <p class="flex justify-between"><span>前月持越し:</span> <span id="user2-carryover" class="font-bold">0円</span></p>
+                    <p class="flex justify-between text-blue-600 font-medium"><span>当月支出合計:</span> <span id="user2-current">0円</span></p>
+                    <p class="flex justify-between border-t pt-1 text-lg font-bold text-gray-800"><span>総合計:</span> <span id="user2-total">0円</span></p>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border p-2 text-left">日</th>
-                                <th class="border p-2 text-left">内容</th>
-                                <th class="border p-2 text-right">金額</th>
-                                <th class="border p-2 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user2-expenses">
-                            <!-- ここに愛華音の支出データが入ります -->
-                        </tbody>
+                <div class="overflow-x-auto min-h-[150px]">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-100"><tr><th class="p-2 text-left">日</th><th class="p-2 text-left">内容</th><th class="p-2 text-right">金額</th><th class="p-2 text-center">操作</th></tr></thead>
+                        <tbody id="user2-expenses"></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-        
-        <!-- 定期支出の確認 -->
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 太陽の定期支出 -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4 text-yellow-600">
-                    太陽の定期支出確認
-                </h3>
-                
-                <div id="user1-regular-expenses" class="space-y-2">
-                    <!-- ここに太陽の定期支出チェックリストが入ります -->
+                <div class="mt-4 pt-4 border-t border-dashed border-gray-200">
+                    <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">定期支出チェック</h4>
+                    <div id="user2-regular-list" class="flex flex-wrap gap-2"></div>
                 </div>
-                
-                <div id="user1-regular-warning" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg hidden">
-                    <p class="font-bold">⚠️ 入力されていない定期支出があります</p>
-                </div>
-            </div>
-            
-            <!-- 愛華音の定期支出 -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4 text-blue-600">
-                    愛華音の定期支出確認
-                </h3>
-                
-                <div id="user2-regular-expenses" class="space-y-2">
-                    <!-- ここに愛華音の定期支出チェックリストが入ります -->
-                </div>
-                
-                <div id="user2-regular-warning" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg hidden">
-                    <p class="font-bold">⚠️ 入力されていない定期支出があります</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 月末清算 -->
-        <div class="mt-6 bg-white p-6 rounded-lg shadow">
-            <h3 class="text-xl font-semibold mb-4">月末清算</h3>
-            <p id="settlementDate" class="text-gray-600 mb-4">清算日: 2025年1月31日</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- 太陽の精算 -->
-                <div class="p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50">
-                    <h4 class="font-bold text-lg mb-2">太陽の精算</h4>
-                    <div class="flex flex-col space-y-2">
-                        <div class="flex justify-between">
-                            <span>合計金額:</span>
-                            <span id="user1-settlement-total" class="font-bold">0円</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>返金額:</span>
-                            <input
-                                id="user1-refund"
-                                type="number"
-                                value="0"
-                                class="w-32 p-2 border rounded text-right"
-                                placeholder="0"
-                            />
-                        </div>
-                        <div class="flex justify-between pt-2 border-t">
-                            <span>翌月持越額:</span>
-                            <span id="user1-next-carryover" class="font-bold">0円</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 愛華音の精算 -->
-                <div class="p-4 rounded-lg border-2 border-blue-400 bg-blue-50">
-                    <h4 class="font-bold text-lg mb-2">愛華音の精算</h4>
-                    <div class="flex flex-col space-y-2">
-                        <div class="flex justify-between">
-                            <span>合計金額:</span>
-                            <span id="user2-settlement-total" class="font-bold">0円</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>返金額:</span>
-                            <input
-                                id="user2-refund"
-                                type="number"
-                                value="0"
-                                class="w-32 p-2 border rounded text-right"
-                                placeholder="0"
-                            />
-                        </div>
-                        <div class="flex justify-between pt-2 border-t">
-                            <span>翌月持越額:</span>
-                            <span id="user2-next-carryover" class="font-bold">0円</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-center">
-                <button
-                    id="settlementButton"
-                    class="px-6 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700"
-                >
-                    月末清算を実行
-                </button>
             </div>
         </div>
 
-        <!-- 同期ステータス表示 -->
-        <div class="mt-6 bg-white p-4 rounded-lg shadow flex justify-between items-center">
-            <div>
-                <span id="syncStatus" class="text-gray-600">データ同期状態: 同期済み</span>
+        <div class="mt-8 bg-white p-6 rounded-lg shadow border-2 border-purple-200">
+            <h3 class="text-2xl font-bold mb-4 text-purple-700 flex items-center"><span class="mr-2">💳</span> 月末清算</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="p-5 rounded-xl border-2 border-yellow-300 bg-yellow-50 shadow-inner">
+                    <h4 class="font-bold text-lg mb-3 text-yellow-800">太陽 の精算</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-gray-600"><span>総合計:</span><span id="user1-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center"><span class="text-gray-700">返金額:</span><input id="user1-refund" type="number" class="w-32 p-2 border rounded text-right font-bold" /></div>
+                        <div class="flex justify-between items-center pt-3 border-t"><span>翌月持越:</span><span id="user1-next-carryover" class="font-black text-xl text-yellow-900">0円</span></div>
+                    </div>
+                </div>
+                <div class="p-5 rounded-xl border-2 border-blue-300 bg-blue-50 shadow-inner">
+                    <h4 class="font-bold text-lg mb-3 text-blue-800">愛華音 の精算</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-gray-600"><span>総合計:</span><span id="user2-settlement-total" class="font-bold">0円</span></div>
+                        <div class="flex justify-between items-center"><span class="text-gray-700">返金額:</span><input id="user2-refund" type="number" class="w-32 p-2 border rounded text-right font-bold" /></div>
+                        <div class="flex justify-between items-center pt-3 border-t"><span>翌月持越:</span><span id="user2-next-carryover" class="font-black text-xl text-blue-900">0円</span></div>
+                    </div>
+                </div>
             </div>
-            <button id="syncButton" class="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600">
-                データを更新
-            </button>
+            <div class="flex justify-center"><button id="settlementButton" class="px-10 py-4 bg-purple-600 text-white rounded-full font-black text-xl shadow-lg hover:bg-purple-700 hover:scale-105 transform transition duration-200">月末清算を確定して翌月へ</button></div>
         </div>
 
-        <!-- デバッグ情報 -->
-        <div id="debugInfo" class="mt-6 bg-gray-800 text-white p-4 rounded-lg shadow hidden">
-            <h3 class="text-xl font-semibold mb-2">デバッグ情報</h3>
-            <pre id="debugOutput" class="text-xs overflow-auto max-h-48"></pre>
-            <div class="mt-2">
-                <button id="toggleDebug" class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-500">
-                    デバッグモード切替
-                </button>
-                <button id="clearDebug" class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-500 ml-2">
-                    ログをクリア
-                </button>
-            </div>
-        </div>
+        <div class="mt-6 flex justify-between items-center text-[10px] text-gray-400 px-2 italic"><span id="syncStatus">同期中...</span><button id="syncButton" class="underline">強制更新</button></div>
     </div>
 
     <script>
-        // APIのURL (GASのウェブアプリURL) - デプロイ後に更新してください
         const API_URL = 'https://script.google.com/macros/s/AKfycbz8PHdXzxbXV8NByZ2XokBXNb4wPSi9JIEohoIWtM-fxvBxzKCHYIDCWs6cOQklY8h4/exec';
         
-        // アプリケーションの状態
         const appState = {
             currentYear: new Date().getFullYear(),
             currentMonth: new Date().getMonth() + 1,
-            editingExpense: null,
-            debugMode: false,
-            settlementDate: null,
-            users: {
-                user1: { name: '太陽' },
-                user2: { name: '愛華音' }
-            },
-            carryOver: {
-                user1: 0,
-                user2: 0
-            },
-            expenses: {
-                user1: [],
-                user2: []
-            },
-            refundAmounts: {
-                user1: 0,
-                user2: 0
-            },
-            regularExpenses: {
+            carryOver: { user1: 0, user2: 0 },
+            expenses: { user1: [], user2: [] },
+            refundAmounts: { user1: 0, user2: 0 },
+            // 定期支出の設定（ここで判定用のキーワードを指定）
+            regularConfig: {
                 user1: [
-                    { description: '電気代', checked: false },
-                    { description: '水道代', checked: false },
-                    { description: 'ガス代', checked: false }
+                    { label: '電気代', keyword: '電気' },
+                    { label: '水道代', keyword: '水道' },
+                    { label: 'ガス代', keyword: 'ガス' }
                 ],
                 user2: [
-                    { description: 'ガソリン代', checked: false }
+                    { label: 'ガソリン代', keyword: 'ガソリン' }
                 ]
             }
         };
 
-        // DOM要素の参照を取得
         const elements = {
             currentMonthDisplay: document.getElementById('currentMonthDisplay'),
-            settlementDate: document.getElementById('settlementDate'),
-            prevMonthButton: document.getElementById('prevMonth'),
-            nextMonthButton: document.getElementById('nextMonth'),
-            formTitle: document.getElementById('formTitle'),
             expenseForm: document.getElementById('expenseForm'),
-            userSelect: document.getElementById('userSelect'),
-            dateInput: document.getElementById('dateInput'),
-            descriptionInput: document.getElementById('descriptionInput'),
-            amountInput: document.getElementById('amountInput'),
             submitButton: document.getElementById('submitButton'),
-            cancelButton: document.getElementById('cancelButton'),
-            user1ExpensesTable: document.getElementById('user1-expenses'),
-            user2ExpensesTable: document.getElementById('user2-expenses'),
-            user1Carryover: document.getElementById('user1-carryover'),
-            user2Carryover: document.getElementById('user2-carryover'),
-            user1Current: document.getElementById('user1-current'),
-            user2Current: document.getElementById('user2-current'),
-            user1Total: document.getElementById('user1-total'),
-            user2Total: document.getElementById('user2-total'),
-            user1RegularExpenses: document.getElementById('user1-regular-expenses'),
-            user2RegularExpenses: document.getElementById('user2-regular-expenses'),
-            user1RegularWarning: document.getElementById('user1-regular-warning'),
-            user2RegularWarning: document.getElementById('user2-regular-warning'),
-            user1SettlementTotal: document.getElementById('user1-settlement-total'),
-            user2SettlementTotal: document.getElementById('user2-settlement-total'),
-            user1Refund: document.getElementById('user1-refund'),
-            user2Refund: document.getElementById('user2-refund'),
-            user1NextCarryover: document.getElementById('user1-next-carryover'),
-            user2NextCarryover: document.getElementById('user2-next-carryover'),
-            settlementButton: document.getElementById('settlementButton'),
-            syncStatus: document.getElementById('syncStatus'),
-            syncButton: document.getElementById('syncButton'),
-            debugInfo: document.getElementById('debugInfo'),
-            debugOutput: document.getElementById('debugOutput'),
-            toggleDebug: document.getElementById('toggleDebug'),
-            clearDebug: document.getElementById('clearDebug')
+            syncStatus: document.getElementById('syncStatus')
         };
 
-        // デバッグログを追加
-        function addDebugLog(message, data = null) {
-            const timestamp = new Date().toLocaleTimeString();
-            let logMessage = `[${timestamp}] ${message}`;
-            
-            if (data) {
-                logMessage += '\n' + JSON.stringify(data, null, 2);
-            }
-            
-            elements.debugOutput.textContent = logMessage + '\n\n' + elements.debugOutput.textContent;
-            console.log(message, data);
-        }
+        function formatCurrency(v) { return Math.floor(v).toLocaleString() + '円'; }
 
-        // JSONP形式でAPIを呼び出す関数
         async function callAPI(action, params = {}) {
-            addDebugLog(`API呼び出し: ${action}`, params);
-            
             return new Promise((resolve, reject) => {
-                // ユニークなコールバック関数名を生成
-                const callbackName = 'jsonpCallback_' + Math.random().toString(36).substring(2, 15);
-                
-                // タイムアウト処理
-                const timeoutId = setTimeout(() => {
+                const callbackName = 'cb_' + Math.random().toString(36).substr(2, 9);
+                window[callbackName] = (data) => {
                     delete window[callbackName];
-                    if (script && script.parentNode) {
-                        script.parentNode.removeChild(script);
-                    }
-                    addDebugLog(`API呼び出しタイムアウト: ${action}`);
-                    reject(new Error('API呼び出しがタイムアウトしました'));
-                }, 10000);
-                
-                // グローバルスコープにコールバック関数を定義
-                window[callbackName] = function(data) {
-                    // タイムアウトをクリア
-                    clearTimeout(timeoutId);
-                    
-                    // コールバック関数の後始末
-                    delete window[callbackName];
-                    if (script && script.parentNode) {
-                        script.parentNode.removeChild(script);
-                    }
-                    
-                    addDebugLog(`API応答: ${action}`, data);
-                    
-                    if (data && data.success) {
-                        resolve(data);
-                    } else {
-                        reject(new Error(data && data.error ? data.error : '不明なエラーが発生しました'));
-                    }
+                    document.body.removeChild(script);
+                    if (data && data.success) resolve(data); else reject(new Error(data.error || 'API Error'));
                 };
-                
-                // パラメータを構築
-                const queryParams = new URLSearchParams({
-                    action: action,
-                    callback: callbackName,
-                    ...params
-                });
-                
-                // APIのURL
-                const url = `${API_URL}?${queryParams.toString()}`;
-                addDebugLog(`リクエストURL: ${url}`);
-                
-                // scriptタグを作成してDOMに追加
+                const q = new URLSearchParams({ action, callback: callbackName, ...params });
                 const script = document.createElement('script');
-                script.src = url;
-                script.onerror = () => {
-                    // タイムアウトをクリア
-                    clearTimeout(timeoutId);
-                    
-                    // エラーハンドリング
-                    delete window[callbackName];
-                    if (script.parentNode) {
-                        script.parentNode.removeChild(script);
-                    }
-                    
-                    addDebugLog(`API呼び出しエラー: ${action}`);
-                    reject(new Error('API呼び出しに失敗しました'));
-                };
-                
-                document.head.appendChild(script);
-            }).catch(error => {
-                addDebugLog(`API呼び出しエラー (${action}):`, error);
-                alert(`データの取得中にエラーが発生しました: ${error.message}`);
-                return { success: false, error: error.message };
+                script.src = `${API_URL}?${q.toString()}`;
+                document.body.appendChild(script);
             });
         }
 
-        // データの読み込み - 拡張版
+        function getStorageKey(u) { return `temp_refund_${appState.currentYear}_${appState.currentMonth}_${u}`; }
+
         async function loadData() {
+            elements.syncStatus.textContent = '同期中...';
             try {
-                elements.syncStatus.textContent = 'データ同期状態: 更新中...';
-                
-                // バッチ処理でデータを一度に取得
-                // バッチ処理でデータを一度に取得する際のパラメータを強化
-        // まずローカルストレージから読み込み（オフライン対応）
-                        // loadFromLocalStorage();
+                const res = await callAPI('getBatchData', { year: appState.currentYear, month: appState.currentMonth });
+                if (res.success) {
+                    appState.expenses.user1 = res.expenses.user1 || [];
+                    appState.expenses.user2 = res.expenses.user2 || [];
+                    appState.carryOver.user1 = parseFloat(res.carryOver.user1) || 0;
+                    appState.carryOver.user2 = parseFloat(res.carryOver.user2) || 0;
+                    appState.refundAmounts.user1 = parseFloat(res.refundAmounts.user1) || 0;
+                    appState.refundAmounts.user2 = parseFloat(res.refundAmounts.user2) || 0;
+                    
+                    const temp1 = localStorage.getItem(getStorageKey('user1'));
+                    const temp2 = localStorage.getItem(getStorageKey('user2'));
+                    if (temp1 !== null) appState.refundAmounts.user1 = parseFloat(temp1);
+                    if (temp2 !== null) appState.refundAmounts.user2 = parseFloat(temp2);
 
-                        // バッチ処理でデータを一度に取得
-                
-                const batchResult = await callAPI('getBatchData', {
-
-                    year: appState.currentYear,
-                    month: appState.currentMonth,
-                    includeSettings: true,  // 設定情報も含める
-                    includeHistory: true    // 履歴情報も含める（持ち越し金額の履歴など）
-                });
-                
-                if (batchResult && batchResult.success) {
-                    // データを状態に反映
-                    if (batchResult.expenses) {
-                        for (const userId in batchResult.expenses) {
-                            appState.expenses[userId] = batchResult.expenses[userId] || [];
-                        }
-                    }
-                    
-                    // 持ち越し金額の詳細をログに記録
-                    addDebugLog('通信レスポンス全体', batchResult);
-                    
-                    if (batchResult.carryOver) {
-                        addDebugLog('取得した持ち越し金額の詳細', batchResult.carryOver);
-                        for (const userId in batchResult.carryOver) {
-                            const carryOverAmount = parseFloat(batchResult.carryOver[userId]) || 0;
-                            addDebugLog(`${userId}の持ち越し金額:`, carryOverAmount);
-                            appState.carryOver[userId] = carryOverAmount;
-                        }
-                    } else {
-                        addDebugLog('サーバーから持ち越し金額を取得できませんでした');
-                    }
-                    
-                    // 精算日の取得
-                    if (batchResult.settlementDate) {
-                        appState.settlementDate = batchResult.settlementDate;
-                    } else {
-                        appState.settlementDate = null;
-                    }
-                    
-                    // サーバーから返金額の情報も取得して設定（この部分はサーバー側の実装に依存）
-                    if (batchResult.refundAmounts) {
-                        for (const userId in batchResult.refundAmounts) {
-                            appState.refundAmounts[userId] = parseFloat(batchResult.refundAmounts[userId]) || 0;
-                        }
-                    }
-                    
-                    addDebugLog('バッチデータ取得成功', batchResult);
-                } else {
-                    addDebugLog('バッチデータ取得失敗', batchResult);
-                }
-
-                                // ローカルストレージに保存
-                                saveToLocalStorage();
-                // UI更新を最適化（requestAnimationFrameを使用）
-                window.requestAnimationFrame(() => {
                     updateUI();
-                    elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
-                });
-                
-                return true;
-            } catch (error) {
-                addDebugLog('データ読み込みエラー:', error);
-                elements.syncStatus.textContent = 'データ同期状態: エラー';
-                return false;
-            }
-        }
-
-        // 持ち越し金額を保持したままデータを読み込む新しい関数
-        async function loadDataWithCarryOver(carryOverValues) {
-            try {
-                elements.syncStatus.textContent = 'データ同期状態: 更新中...';
-                
-                // バッチ処理でデータを一度に取得
-                const batchResult = await callAPI('getBatchData', {
-                    year: appState.currentYear,
-                    month: appState.currentMonth
-                });
-                
-                if (batchResult && batchResult.success) {
-                    // 支出データを状態に反映
-                    if (batchResult.expenses) {
-                        for (const userId in batchResult.expenses) {
-                            appState.expenses[userId] = batchResult.expenses[userId] || [];
-                        }
-                    }
-                    
-                    // 持ち越し金額の処理 - 指定された値があればそれを優先
-                    if (carryOverValues) {
-                        for (const userId in carryOverValues) {
-                            appState.carryOver[userId] = parseFloat(carryOverValues[userId]) || 0;
-                            addDebugLog(`${userId}の持ち越し金額を設定:`, appState.carryOver[userId]);
-                        }
-                    } else if (batchResult.carryOver) {
-                        for (const userId in batchResult.carryOver) {
-                            appState.carryOver[userId] = parseFloat(batchResult.carryOver[userId]) || 0;
-                        }
-                    }
-                    
-                    // 精算日の取得
-                    if (batchResult.settlementDate) {
-                        appState.settlementDate = batchResult.settlementDate;
-                    }
-                    
-                    addDebugLog('バッチデータ取得成功', batchResult);
-                } else {
-                    addDebugLog('バッチデータ取得失敗', batchResult);
+                    elements.syncStatus.textContent = `同期済み: ${new Date().toLocaleTimeString()}`;
                 }
-                
-                // UI更新を最適化（requestAnimationFrameを使用）
-                window.requestAnimationFrame(() => {
-                    updateUI();
-                    elements.syncStatus.textContent = 'データ同期状態: 同期済み (' + new Date().toLocaleTimeString() + ')';
-                });
-                
-                return true;
-            } catch (error) {
-                addDebugLog('データ読み込みエラー:', error);
-                elements.syncStatus.textContent = 'データ同期状態: エラー';
-                return false;
-            }
+            } catch (e) { elements.syncStatus.textContent = '同期エラー'; }
         }
 
-        // ユーティリティ関数 - 表示用にフォーマットされた数値を返す
-        function formatCurrency(amount) {
-            return amount.toLocaleString() + '円';
-        }
-
-        // ユーティリティ関数 - 日付を yyyy年m月 形式で表示
-        function formatYearMonth(year, month) {
-            return `${year}年${month}月`;
-        }
-
-                // ローカルストレージにデータを保存
-                function saveToLocalStorage() {
-                                try {
-                                                    const dataToSave = {
-                                                                            carryOver: appState.carryOver,
-                                                                            expenses: appState.expenses,
-                                                                            refundAmounts: appState.refundAmounts,
-                                                                            regularExpenses: appState.regularExpenses,
-                                                                            currentYear: appState.currentYear,
-                                                                            currentMonth: appState.currentMonth,
-                                                                            lastSaved: new Date().toISOString()
-                                                    };
-                                                    localStorage.setItem('householdBudgetData', JSON.stringify(dataToSave));
-                                                    addDebugLog('ローカルストレージに保存しました');
-                                                    return true;
-                                } catch (error) {
-                                                    addDebugLog('ローカルストレージ保存エラー:', error);
-                                                    return false;
-                                }
-                }
-
-                // ローカルストレージからデータを読み込み
-                function loadFromLocalStorage() {
-                                try {
-                                                    const savedData = localStorage.getItem('householdBudgetData');
-                                                    if (savedData) {
-                                                                            const data = JSON.parse(savedData);
-                                                                            appState.carryOver = data.carryOver || { user1: 0, user2: 0 };
-                                                                            appState.expenses = data.expenses || { user1: [], user2: [] };
-                                                                            appState.refundAmounts = data.refundAmounts || { user1: 0, user2: 0 };
-                                                                            if (data.regularExpenses) {
-                                                                                                        appState.regularExpenses = data.regularExpenses;
-                                                                                }
-                                                                            if (data.currentYear && data.currentMonth) {
-                                                                                                        appState.currentYear = data.currentYear;
-                                                                                                        appState.currentMonth = data.currentMonth;
-                                                                                }
-                                                                            addDebugLog('ローカルストレージから復元しました', data);
-                                                                            return true;
-                                                    }
-                                                    return false;
-                                } catch (error) {
-                                                    addDebugLog('ローカルストレージ読み込みエラー:', error);
-                                                    return false;
-                                }
-                }
-        
-
-        // ユーティリティ関数 - 指定月の最終日を取得
-        function getLastDayOfMonth(year, month) {
-            return new Date(year, month, 0).getDate();
-        }
-        
-        // ユーティリティ関数 - 日時をフォーマットして表示
-        function formatTimestamp(date) {
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            const hours = date.getHours();
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            
-            return `${year}年${month}月${day}日 ${hours}:${minutes}`;
-        }
-
-        // デバウンス関数
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        }
-        
-        // 表示の更新 - 最適化版
         function updateUI() {
-            // 月表示の更新（即時反映が必要な部分）
-            elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
-            
-            // 清算日表示の更新 (前回の精算日がある場合はそちらを優先、なければ月末日を表示)
-            if (appState.settlementDate) {
-                elements.settlementDate.textContent = `清算日: ${appState.settlementDate}`;
-            } else {
-                const lastDay = getLastDayOfMonth(appState.currentYear, appState.currentMonth);
-                elements.settlementDate.textContent = `清算予定日: ${appState.currentYear}年${appState.currentMonth}月${lastDay}日`;
-            }
-            
-            // 重い処理はrequestAnimationFrameで実行
-            window.requestAnimationFrame(() => {
-                // 支出テーブルの更新
-                updateExpenseTables();
-                
-                // 集計の更新
-                updateTotals();
-                
-                // 低優先度の更新は遅延実行
-                setTimeout(() => {
-                    // 定期支出チェックの更新
-                    updateRegularExpenses();
-                    
-                    // 精算画面の更新
-                    updateSettlementUI();
-                }, 10);
+            elements.currentMonthDisplay.textContent = `${appState.currentYear}年${appState.currentMonth}月`;
+            ['user1', 'user2'].forEach(u => {
+                renderExpenses(u);
+                renderRegularCheck(u); // 定期支出チェックを描画
             });
-        }
-        
-        // 部分的な更新のためのメソッドを追加
-        function updateExpenseTablesForUser(userId) {
-            const tableBody = document.getElementById(`${userId}-expenses`);
-            const expenses = appState.expenses[userId] || [];
-            
-            // テーブル更新処理（既存の更新関数から抽出）
-            // ...
-        }
-        
-        // デバウンスされた更新関数
-        const debouncedUpdateRegularExpenses = debounce(updateRegularExpenses, 100);
-        const debouncedUpdateSettlementUI = debounce(updateSettlementUI, 100);
-
-        // 支出テーブルの更新
-        function updateExpenseTables() {
-            for (const userId in appState.expenses) {
-                const tableBody = document.getElementById(`${userId}-expenses`);
-                const expenses = appState.expenses[userId];
-                
-                // テーブルをクリア
-                tableBody.innerHTML = '';
-                
-                if (!expenses || expenses.length === 0) {
-                    const emptyRow = document.createElement('tr');
-                    emptyRow.innerHTML = `
-                        <td colspan="4" class="border p-2 text-center text-gray-500">
-                            データがありません
-                        </td>
-                    `;
-                    tableBody.appendChild(emptyRow);
-                } else {
-                    // 支出データを表示
-                    expenses.forEach(expense => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
-                        
-                        const amountClass = expense.amount < 0 ? 'negative-amount' : '';
-                        
-                        row.innerHTML = `
-                            <td class="border p-2">${expense.date}</td>
-                            <td class="border p-2">${expense.description}</td>
-                            <td class="border p-2 text-right ${amountClass}">${parseFloat(expense.amount).toLocaleString()}</td>
-                            <td class="border p-2 text-center">
-                                <button
-                                    data-id="${expense.id}"
-                                    data-action="edit"
-                                    class="px-2 py-1 bg-blue-500 text-white rounded text-sm mr-1 hover:bg-blue-600"
-                                >
-                                    編集
-                                </button>
-                                <button
-                                    data-id="${expense.id}"
-                                    data-action="delete"
-                                    class="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                                >
-                                    削除
-                                </button>
-                            </td>
-                        `;
-                        
-                        tableBody.appendChild(row);
-                        
-                        // 編集ボタンにイベントリスナーを追加
-                        row.querySelector('[data-action="edit"]').addEventListener('click', function() {
-                            const expenseId = this.getAttribute('data-id');
-                            editExpense(userId, expenseId);
-                        });
-                        
-                        // 削除ボタンにイベントリスナーを追加
-                        row.querySelector('[data-action="delete"]').addEventListener('click', function() {
-                            const expenseId = this.getAttribute('data-id');
-                            deleteExpense(userId, expenseId);
-                        });
-                    });
-                }
-            }
+            updateTotals();
         }
 
-        // 特定ユーザーの支出テーブルだけを更新する関数
-        function updateSingleUserExpenses(userId) {
-            const tableBody = document.getElementById(`${userId}-expenses`);
-            const expenses = appState.expenses[userId] || [];
-            
-            // テーブルをクリア
-            tableBody.innerHTML = '';
-            
-            if (expenses.length === 0) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.innerHTML = `
-                    <td colspan="4" class="border p-2 text-center text-gray-500">
-                        データがありません
-                    </td>
-                `;
-                tableBody.appendChild(emptyRow);
+        function renderExpenses(userId) {
+            const container = document.getElementById(`${userId}-expenses`);
+            container.innerHTML = '';
+            const items = appState.expenses[userId];
+            if (items.length === 0) {
+                container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400 italic">入力なし</td></tr>';
                 return;
             }
-            
-            // DOM操作を最小限にするためのフラグメント
-            const fragment = document.createDocumentFragment();
-            
-            // 支出データを表示
-            expenses.forEach(expense => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                
-                const amountClass = expense.amount < 0 ? 'negative-amount' : '';
-                
-                row.innerHTML = `
-                    <td class="border p-2">${expense.date}</td>
-                    <td class="border p-2">${expense.description}</td>
-                    <td class="border p-2 text-right ${amountClass}">${parseFloat(expense.amount).toLocaleString()}</td>
-                    <td class="border p-2 text-center">
-                        <button
-                            data-id="${expense.id}"
-                            data-action="edit"
-                            class="px-2 py-1 bg-blue-500 text-white rounded text-sm mr-1 hover:bg-blue-600"
-                        >
-                            編集
-                        </button>
-                        <button
-                            data-id="${expense.id}"
-                            data-action="delete"
-                            class="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                        >
-                            削除
-                        </button>
-                    </td>
-                `;
-                
-                // イベントリスナーを追加
-                const editBtn = row.querySelector('[data-action="edit"]');
-                editBtn.addEventListener('click', function() {
-                    editExpense(userId, expense.id);
-                });
-                
-                const deleteBtn = row.querySelector('[data-action="delete"]');
-                deleteBtn.addEventListener('click', function() {
-                    deleteExpense(userId, expense.id);
-                });
-                
-                fragment.appendChild(row);
+            items.forEach(ex => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b hover:bg-gray-50';
+                tr.innerHTML = `<td class="p-2">${ex.date}日</td><td class="p-2">${ex.description}</td><td class="p-2 text-right font-mono">${parseFloat(ex.amount).toLocaleString()}</td><td class="p-2 text-center"><button onclick="deleteExpense('${userId}', '${ex.id}')" class="text-red-400">✕</button></td>`;
+                container.appendChild(tr);
             });
-            
-            // フラグメントを一度にDOMに追加
-            tableBody.appendChild(fragment);
         }
 
-        // 合計金額の更新
+        // ★ 定期支出のチェック判定ロジック ★
+        function renderRegularCheck(userId) {
+            const listContainer = document.getElementById(`${userId}-regular-list`);
+            listContainer.innerHTML = '';
+            
+            const config = appState.regularConfig[userId];
+            const expenses = appState.expenses[userId];
+
+            config.forEach(item => {
+                // ここが判定のキモ：「電気代」というラベルに対し、支出内容に「電気」が含まれているか
+                const isPaid = expenses.some(ex => ex.description && ex.description.includes(item.keyword));
+                
+                const badge = document.createElement('span');
+                badge.className = `px-2 py-1 rounded text-[10px] font-bold border transition-all ${
+                    isPaid 
+                    ? 'bg-green-100 text-green-700 border-green-300' 
+                    : 'bg-red-50 text-red-400 border-red-200 opacity-60'
+                }`;
+                badge.innerHTML = `${isPaid ? '✅' : '⭕'} ${item.label}`;
+                listContainer.appendChild(badge);
+            });
+        }
+
         function updateTotals() {
-            for (const userId in appState.expenses) {
-                const expenses = appState.expenses[userId] || [];
-                const carryOver = parseFloat(appState.carryOver[userId]) || 0;
+            ['user1', 'user2'].forEach(u => {
+                const currentSum = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                const carry = appState.carryOver[u];
+                const total = currentSum + carry;
+                const refund = appState.refundAmounts[u];
+
+                document.getElementById(`${u}-carryover`).textContent = formatCurrency(carry);
+                document.getElementById(`${u}-current`).textContent = formatCurrency(currentSum);
+                document.getElementById(`${u}-total`).textContent = formatCurrency(total);
+                document.getElementById(`${u}-settlement-total`).textContent = formatCurrency(total);
                 
-                const currentTotal = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
-                const total = currentTotal + carryOver;
-                
-                document.getElementById(`${userId}-carryover`).textContent = formatCurrency(carryOver);
-                document.getElementById(`${userId}-current`).textContent = formatCurrency(currentTotal);
-                document.getElementById(`${userId}-total`).textContent = formatCurrency(total);
-                
-                // 精算画面の合計も更新
-                document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
-                
-                // 返金額が変更されたときのイベントを設定
-                const refundInput = document.getElementById(`${userId}-refund`);
-                const nextCarryover = document.getElementById(`${userId}-next-carryover`);
-                
-                refundInput.value = appState.refundAmounts[userId] || 0;
-                
-                // 翌月持越額の表示を更新
-                const refundAmount = parseFloat(refundInput.value) || 0;
-                nextCarryover.textContent = formatCurrency(total - refundAmount);
-            }
+                const refundInput = document.getElementById(`${u}-refund`);
+                refundInput.value = refund || '';
+                document.getElementById(`${u}-next-carryover`).textContent = formatCurrency(total - refund);
+            });
         }
 
-        // 定期支出チェックの更新
-        function updateRegularExpenses() {
-            for (const userId in appState.regularExpenses) {
-                const container = document.getElementById(`${userId}-regular-expenses`);
-                const warning = document.getElementById(`${userId}-regular-warning`);
-                
-                // コンテナをクリア
-                container.innerHTML = '';
-                
-                // 定期支出項目の確認
-                const regularItems = appState.regularExpenses[userId];
-                
-                // 支出データから定期支出が入力されているかチェック
-                const expenses = appState.expenses[userId] || [];
-                regularItems.forEach(item => {
-                    item.checked = expenses.some(expense => 
-                        expense.description && expense.description.includes(item.description)
-                    );
-                });
-                
-                // 定期支出チェックリストを表示
-                regularItems.forEach((item, index) => {
-                    const itemElement = document.createElement('div');
-                    itemElement.className = `p-3 rounded-lg flex items-center justify-between ${
-                        item.checked ? 'bg-green-100' : 'bg-red-100'
-                    }`;
-                    
-                    itemElement.innerHTML = `
-                        <div class="flex items-center">
-                            <input
-                                type="checkbox"
-                                ${item.checked ? 'checked' : ''}
-                                class="mr-3 h-5 w-5"
-                                data-user="${userId}"
-                                data-index="${index}"
-                            />
-                           <span class="font-medium">${item.description}</span>
-                       </div>
-                       <span class="${item.checked ? 'text-green-600' : 'text-red-600'}">
-                           ${item.checked ? '入力済み' : '未入力'}
-                       </span>
-                   `;
-                   
-                   container.appendChild(itemElement);
-                   
-                   // チェックボックスにイベントリスナーを追加
-                   const checkbox = itemElement.querySelector('input[type="checkbox"]');
-                   checkbox.addEventListener('change', function() {
-                       const userId = this.getAttribute('data-user');
-                       const index = parseInt(this.getAttribute('data-index'));
-                       
-                       toggleRegularExpenseCheck(userId, index);
-                   });
-               });
-               
-               // 警告表示の制御
-               const hasUncheckedItems = regularItems.some(item => !item.checked);
-               warning.style.display = hasUncheckedItems ? 'block' : 'none';
-           }
-       }
+        function handleRefundInput(u, val) {
+            const amount = parseFloat(val) || 0;
+            appState.refundAmounts[u] = amount;
+            localStorage.setItem(getStorageKey(u), amount);
+            updateTotals();
+        }
 
-       // 精算画面の更新 - イベントリスナーの重複を防止
-       function updateSettlementUI() {
-           for (const userId in appState.expenses) {
-               const total = calculateTotal(userId);
-               const refundInput = document.getElementById(`${userId}-refund`);
-               const nextCarryover = document.getElementById(`${userId}-next-carryover`);
-               
-               document.getElementById(`${userId}-settlement-total`).textContent = formatCurrency(total);
-               
-               // イベントリスナーを一度削除してから追加（重複を防止）
-               const newRefundInput = refundInput.cloneNode(true);
-               refundInput.parentNode.replaceChild(newRefundInput, refundInput);
-               
-               // 返金額の変更イベント
-               newRefundInput.addEventListener('input', function() {
-                   const refundAmount = parseFloat(this.value) || 0;
-                   appState.refundAmounts[userId] = refundAmount;
-                   nextCarryover.textContent = formatCurrency(total - refundAmount);
-               });
-               
-               // 初期表示 - appStateの保存された値を使用
-               const refundAmount = appState.refundAmounts[userId] || 0;
-                               // ローカルストレージに保存
-                               saveToLocalStorage();
-               newRefundInput.value = refundAmount;
-               nextCarryover.textContent = formatCurrency(total - refundAmount);
-           }
-       }
+        document.getElementById('user1-refund').oninput = (e) => handleRefundInput('user1', e.target.value);
+        document.getElementById('user2-refund').oninput = (e) => handleRefundInput('user2', e.target.value);
 
-       // 合計金額の計算
-       function calculateTotal(userId) {
-           const expenses = appState.expenses[userId] || [];
-           const carryOver = parseFloat(appState.carryOver[userId]) || 0;
-           
-           return expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0) + carryOver;
-       }
-
-       async function addExpense(e) {
-            e.preventDefault();
-            
-            // ボタンを無効化して視覚的フィードバックを提供
-            elements.submitButton.disabled = true;
-            elements.submitButton.textContent = '保存中...';
-            
+        document.getElementById('settlementButton').onclick = async () => {
+            if (!confirm('精算を確定し、翌月へ移動しますか？')) return;
             try {
-                // 入力値の取得
-                const userId = elements.userSelect.value;
-                const date = elements.dateInput.value.trim();
-                const description = elements.descriptionInput.value.trim();
-                const amountStr = elements.amountInput.value.trim();
-                
-                // バリデーション
-                if (!date || !description || !amountStr) {
-                    alert('すべての項目を入力してください');
-                    return;
+                for (const u of ['user1', 'user2']) {
+                    const total = appState.expenses[u].reduce((s, e) => s + parseFloat(e.amount || 0), 0) + appState.carryOver[u];
+                    const refund = appState.refundAmounts[u];
+                    await callAPI('settlement', {
+                        data: JSON.stringify({
+                            userId: u, year: appState.currentYear, month: appState.currentMonth,
+                            currentTotal: total, refund: refund, nextCarryOver: total - refund,
+                            settlementDate: new Date().toLocaleString('ja-JP')
+                        })
+                    });
+                    localStorage.removeItem(getStorageKey(u));
                 }
-                
-                const amount = parseFloat(amountStr.replace(/,/g, ''));
-                
-                if (isNaN(amount)) {
-                    alert('金額は数値で入力してください');
-                    return;
-                }
-                
-                // 新しい支出オブジェクトの作成
-                const newExpense = {
-                    userId: userId,
-                    date: date,
-                    description: description,
-                    amount: amount,
-                    year: appState.currentYear,
-                    month: appState.currentMonth
-                };
-                
-                // 一時的なIDの生成
-                const tempId = 'temp_' + Date.now();
-                
-                // 編集モードの場合
-                if (appState.editingExpense) {
-                    // ローカルの状態から古いデータを削除
-                    const index = appState.expenses[userId].findIndex(item => item.id === appState.editingExpense.id);
-                    if (index !== -1) {
-                        appState.expenses[userId].splice(index, 1);
-                    }
-                    
-                    // サーバーでの削除処理は非同期で行う（結果を待たない）
-                    deleteExpense(userId, appState.editingExpense.id, true);
-                }
-                
-                // 一時的にローカルの状態に追加（即時反映）
-                appState.expenses[userId].push({
-                    id: tempId,
-                    ...newExpense
-                });
-                
-                // UIをすぐに更新
-                updateSingleUserExpenses(userId);
-                updateTotals();
-                
-                addDebugLog('支出データを保存します', newExpense);
-                
-                // サーバーに保存（バックグラウンドで）
-                const result = await callAPI('saveExpense', {
-                    data: JSON.stringify(newExpense)
-                });
-                
-                if (result && result.success) {
-                    addDebugLog('支出データの保存に成功しました', result);
-                    
-                    // 一時IDを実際のIDに置き換え
-                    const realId = result.id;
-                    const index = appState.expenses[userId].findIndex
-                        
-                                        // ローカルストレージに保存
-                                    saveToLocalStorage();(item => item.id === tempId);
-                    if (index !== -1) {
-                        appState.expenses[userId][index].id = realId;
-                    }
-                    
-                    // フォームをリセット
-                    elements.expenseForm.reset();
-                    
-                    // 定期支出の状態を更新
-                    updateRegularExpenses();
-                    
-                    // 編集モードをリセット
-                    if (appState.editingExpense) {
-                        appState.editingExpense = null;
-                        elements.formTitle.textContent = '新規支出の追加';
-                        elements.cancelButton.classList.add('hidden');
-                    }
-                } else {
-                    addDebugLog('支出データの保存に失敗しました', result);
-                    
-                    // エラー時は一時データを削除
-                    const index = appState.expenses[userId].findIndex(item => item.id === tempId);
-                    if (index !== -1) {
-                        appState.expenses[userId].splice(index, 1);
-                        updateSingleUserExpenses(userId);
-                        updateTotals();
-                    }
-                    
-                    alert('支出の保存に失敗しました。後でもう一度お試しください。');
-                }
-            } catch (error) {
-                addDebugLog('支出追加処理エラー:', error);
-                alert(`エラーが発生しました: ${error.message}`);
-            } finally {
-                // 必ずボタンを元に戻す
-                elements.submitButton.disabled = false;
-                elements.submitButton.textContent = '追加';
-            }
+                alert('精算完了！');
+                appState.currentMonth++;
+                if (appState.currentMonth > 12) { appState.currentMonth = 1; appState.currentYear++; }
+                loadData();
+            } catch (e) { alert('精算エラー'); }
+        };
+
+        elements.expenseForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                userId: document.getElementById('userSelect').value,
+                date: document.getElementById('dateInput').value,
+                description: document.getElementById('descriptionInput').value,
+                amount: parseFloat(document.getElementById('amountInput').value),
+                year: appState.currentYear, month: appState.currentMonth
+            };
+            if (!data.date || !data.description || isNaN(data.amount)) return alert('入力を確認してください');
+            elements.submitButton.disabled = true;
+            try {
+                await callAPI('saveExpense', { data: JSON.stringify(data) });
+                elements.expenseForm.reset();
+                await loadData();
+            } catch (err) { alert('保存失敗'); }
+            finally { elements.submitButton.disabled = false; }
+        };
+
+        window.deleteExpense = async (userId, id) => {
+            if (confirm('削除しますか？')) { await callAPI('deleteExpense', { id }); loadData(); }
+        };
+
+        function changeMonth(dir) {
+            appState.currentMonth += dir;
+            if (appState.currentMonth > 12) { appState.currentMonth = 1; appState.currentYear++; }
+            if (appState.currentMonth < 1) { appState.currentMonth = 12; appState.currentYear--; }
+            loadData();
         }
 
-       // 支出の編集
-       function editExpense(userId, expenseId) {
-           const expenses = appState.expenses[userId] || [];
-           const expense = expenses.find(item => item.id === expenseId);
-           
-           if (!expense) {
-               addDebugLog('編集対象の支出が見つかりません', { userId, expenseId });
-               return;
-           }
-           
-           // 編集対象を保存
-           appState.editingExpense = expense;
-           
-           // フォームに値をセット
-           elements.userSelect.value = userId;
-           elements.dateInput.value = expense.date;
-           elements.descriptionInput.value = expense.description;
-           elements.amountInput.value = expense.amount;
-           
-           // フォームタイトルと送信ボタンのテキストを変更
-           elements.formTitle.textContent = '支出の編集';
-           elements.submitButton.textContent = '保存';
-           
-           // キャンセルボタンを表示
-           elements.cancelButton.classList.remove('hidden');
-           
-           // フォームまでスクロール
-           elements.expenseForm.scrollIntoView({ behavior: 'smooth' });
-       }
+        document.getElementById('prevMonth').onclick = () => changeMonth(-1);
+        document.getElementById('nextMonth').onclick = () => changeMonth(1);
+        document.getElementById('syncButton').onclick = () => loadData();
 
-       // 支出の削除
-       async function deleteExpense(userId, expenseId, skipConfirm = false) {
-           if (!skipConfirm && !confirm('この支出を削除してもよろしいですか？')) {
-               return;
-           }
-           
-           addDebugLog('支出データを削除します', { userId, expenseId });
-           
-           try {
-               // GAS側のdeleteExpense機能を呼び出す
-               const result = await callAPI('deleteExpense', {
-                   id: expenseId
-               });
-               
-               if (result && result.success) {
-                   addDebugLog('支出データの削除に成功しました', { expenseId });
-                   // データを再読み込み
-                   await loadData();
-               } else {
-                   addDebugLog('支出データの削除に失敗しました', result);
-                   throw new Error(result && result.error ? result.error : '削除処理に失敗しました');
-               }
-           } catch (error) {
-               addDebugLog('削除エラー:', error);
-               alert(`削除中にエラーが発生しました: ${error.message}`);
-           }
-       }
-
-       // 定期支出のチェック切り替え
-       function toggleRegularExpenseCheck(userId, index) {
-           const regularItems = appState.regularExpenses[userId];
-           
-           if (regularItems[index]) {
-               regularItems[index].checked = !regularItems[index].checked;
-               updateRegularExpenses();
-           }
-       }
-
-       // 月末清算処理 - 持ち越し金額を正しく設定する修正版
-       async function handleSettlement() {
-           if (!confirm(`${appState.currentYear}年${appState.currentMonth}月の精算を行いますか？`)) {
-               return;
-           }
-           
-           // 精算実行時の日時を取得
-           const settlementTimestamp = new Date();
-           const formattedTimestamp = formatTimestamp(settlementTimestamp);
-           
-           // 精算日を表示
-           elements.settlementDate.textContent = `清算日: ${formattedTimestamp}`;
-           appState.settlementDate = formattedTimestamp;
-           
-           addDebugLog('月末清算を開始します', { timestamp: formattedTimestamp });
-           
-           try {
-               // 各ユーザーの精算データを格納する配列
-               const settlementResults = {};
-               
-               // 各ユーザーの精算処理
-               for (const userId in appState.expenses) {
-                   const total = calculateTotal(userId);
-                   const refundAmount = parseFloat(document.getElementById(`${userId}-refund`).value) || 0;
-                   const nextCarryOver = total - refundAmount;
-                   
-                   const settlementData = {
-                       userId: userId,
-                       year: appState.currentYear,
-                       month: appState.currentMonth,
-                       currentTotal: total,
-                       refund: refundAmount,
-                       nextCarryOver: nextCarryOver,
-                       settlementDate: formattedTimestamp
-                   };
-                   
-                   addDebugLog(`${userId}の精算データ`, settlementData);
-                   
-                   // 精算処理をGASに送信
-                   const result = await callAPI('settlement', {
-                       data: JSON.stringify(settlementData)
-                   });
-                   
-                   if (!result || !result.success) {
-                       const errorMsg = `${appState.users[userId].name}の精算処理に失敗しました`;
-                       addDebugLog(errorMsg, result);
-                       throw new Error(errorMsg);
-                   }
-                   
-                   // 正常に処理された場合、結果を保存
-                   settlementResults[userId] = nextCarryOver;
-               }
-               
-               // 月を進める
-               const nextMonth = appState.currentMonth === 12 ? 1 : appState.currentMonth + 1;
-               const nextYear = appState.currentMonth === 12 ? appState.currentYear + 1 : appState.currentYear;
-               
-               // 翌月の持ち越し額を事前に設定（loadDataで上書きされるのを防ぐ）
-               for (const userId in settlementResults) {
-                   appState.carryOver[userId] = settlementResults[userId];
-               }
-               
-               appState.currentMonth = nextMonth;
-               appState.currentYear = nextYear;
-               
-               // データを再読み込み - carryOverの値を保持する
-               await loadDataWithCarryOver(settlementResults);
-               
-               // 返金額はリセットしない (バグの修正)
-               // appState.refundAmounts = {
-               //     user1: 0,
-               //     user2: 0
-               // };
-               
-               appState.settlementDate = null; // 新しい月では精算日をリセット
-               
-               addDebugLog('精算処理が完了しました', settlementResults);
-               alert('精算が完了しました。翌月へ持ち越しました。');
-           } catch (error) {
-               addDebugLog('精算処理エラー:', error);
-               alert(`精算処理中にエラーが発生しました: ${error.message}`)
-                               // ローカルストレージに保存
-                           saveToLocalStorage();;
-           }
-       }
-
-       // 月の移動を扱う関数 - 最適化版
-        function changeMonth(direction) {
-            // 状態更新
-            let newMonth = appState.currentMonth + direction;
-            let newYear = appState.currentYear;
-            
-            if (newMonth < 1) {
-                newMonth = 12;
-                newYear--;
-            } else if (newMonth > 12) {
-                newMonth = 1;
-                newYear++;
-            }
-            
-            appState.currentMonth = newMonth;
-            appState.currentYear = newYear;
-
-            // このコードを追加
-            addDebugLog(`月の変更: ${appState.currentYear}年${appState.currentMonth}月に切り替え`);
-            
-            // 即時に月表示だけ更新してユーザー体験を向上
-            elements.currentMonthDisplay.textContent = formatYearMonth(appState.currentYear, appState.currentMonth);
-            
-            // データロードは少し遅延させる
-            setTimeout(() => loadData(), 50);
-        }
-        
-        // 前月ボタンのイベントハンドラ - 最適化版
-        function goToPrevMonth() {
-            changeMonth(-1);
-        }
-        
-        // 次月ボタンのイベントハンドラ - 最適化版
-        function goToNextMonth() {
-            changeMonth(1);
-        }
-
-       // デバッグモード切替
-       function toggleDebugMode() {
-           appState.debugMode = !appState.debugMode;
-           elements.debugInfo.style.display = appState.debugMode ? 'block' : 'none';
-       }
-
-       // デバッグログクリア
-       function clearDebugLog() {
-           elements.debugOutput.textContent = '';
-       }
-
-       // イベントリスナーの設定
-       function setupEventListeners() {
-           // 前月ボタン
-           elements.prevMonthButton.addEventListener('click', goToPrevMonth);
-           
-           // 次月ボタン
-           elements.nextMonthButton.addEventListener('click', goToNextMonth);
-           
-           // 支出フォーム送信
-           elements.expenseForm.addEventListener('submit', addExpense);
-           
-           // キャンセルボタン
-           elements.cancelButton.addEventListener('click', function() {
-               // 編集をキャンセル
-               appState.editingExpense = null;
-               elements.formTitle.textContent = '新規支出の追加';
-               elements.submitButton.textContent = '追加';
-               elements.cancelButton.classList.add('hidden');
-               elements.expenseForm.reset();
-           });
-           
-           // 清算ボタン
-           elements.settlementButton.addEventListener('click', handleSettlement);
-           
-           // 同期ボタン
-           elements.syncButton.addEventListener('click', loadData);
-           
-           // デバッグ関連
-           elements.toggleDebug.addEventListener('click', toggleDebugMode);
-           elements.clearDebug.addEventListener('click', clearDebugLog);
-           
-           // キーボードショートカット
-           document.addEventListener('keydown', function(event) {
-               // Ctrl+D でデバッグモード切替
-               if (event.ctrlKey && event.key === 'd') {
-                   event.preventDefault();
-                   toggleDebugMode();
-               }
-           });
-       }
-
-       // アプリの初期化
-       async function initApp() {
-           // デバッグモード初期化
-           elements.debugInfo.style.display = 'none';
-           
-           // イベントリスナーを設定
-           setupEventListeners();
-
-
-                   // ローカルストレージから復元を試みる
-                   const hasLocalData = loadFromLocalStorage();
-                   if (hasLocalData) {
-                                   addDebugLog('ローカルストレージからデータを復元しました');
-                                   updateUI();  // 先にローカルデータで画面表示
-                   }
-           
-           // 初期データ読み込み
-           addDebugLog('アプリを初期化しています');
-           await loadData();
-           addDebugLog('初期化完了');
-       }
-
-       // アプリを初期化
-       initApp();
-   </script>
+        loadData();
+    </script>
 </body>
 </html>
